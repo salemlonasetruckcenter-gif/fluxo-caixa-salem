@@ -463,6 +463,13 @@ class FluxoCaixa {
     async registrarVenda() {
         console.log('registrarVenda() chamado');
         
+        // Evitar duplo submit
+        if (this.registrandoVenda) {
+            console.log('Já está registrando uma venda, ignorando...');
+            return;
+        }
+        this.registrandoVenda = true;
+        
         // Verificar se elementos existem
         const clienteEl = document.getElementById('cliente');
         const valorEl = document.getElementById('valor');
@@ -473,6 +480,7 @@ class FluxoCaixa {
         if (!clienteEl || !valorEl || !tipoVendaEl || !dataVendaEl) {
             console.error('ERRO: Elementos do formulário não encontrados!');
             this.mostrarAlerta('Erro no formulário. Recarregue a página.', 'danger');
+            this.registrandoVenda = false;
             return;
         }
         
@@ -487,6 +495,7 @@ class FluxoCaixa {
         if (!cliente || !valor || !tipoVenda || !dataVenda) {
             console.log('Campos obrigatórios não preenchidos');
             this.mostrarAlerta('Preencha todos os campos obrigatórios!', 'warning');
+            this.registrandoVenda = false;
             return;
         }
 
@@ -501,6 +510,7 @@ class FluxoCaixa {
         
         if (dataVendaObj > hoje) {
             this.mostrarAlerta(`A data da venda (${this.formatarData(dataVenda)}) não pode ser futura! Hoje é ${this.formatarData(hoje.toISOString().split('T')[0])}.`, 'warning');
+            this.registrandoVenda = false;
             return;
         }
 
@@ -522,6 +532,7 @@ class FluxoCaixa {
             const resultado = await database.salvarVenda(venda);
             if (!resultado.success) {
                 this.mostrarAlerta('Erro ao salvar venda: ' + resultado.error, 'danger');
+                this.registrandoVenda = false;
                 return;
             }
             
@@ -534,6 +545,7 @@ class FluxoCaixa {
             
             if (!resultadoParcelas.success) {
                 this.mostrarAlerta('Erro ao salvar parcelas: ' + resultadoParcelas.error, 'danger');
+                this.registrandoVenda = false;
                 return;
             }
             
@@ -560,6 +572,7 @@ class FluxoCaixa {
             window.history.replaceState(null, null, window.location.href);
         }
         
+        this.registrandoVenda = false;
         this.mostrarAlerta('Venda registrada com sucesso!', 'success');
     }
     
@@ -1035,11 +1048,6 @@ class FluxoCaixa {
                     <button class="btn btn-sm btn-outline-primary" onclick="fluxoCaixa.editarMovimentacao('${mov.id}', '${mov.tipo}')">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    ${mov.tipo === 'saida' ? 
-                        `<button class="btn btn-sm btn-outline-danger" onclick="moduloSaidas.excluirSaida('${mov.id}')">
-                            <i class="bi bi-trash"></i>
-                        </button>` : ''
-                    }
                 </td>
             `;
             
