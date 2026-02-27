@@ -39,7 +39,8 @@ class ModuloSaidas {
         em5Dias.setDate(em5Dias.getDate() + 5);
         
         const contasAVencer = this.saidas.filter(s => {
-            if (s.status === 'pago') return false;
+            // Verificar se já foi paga (usando dataPagamento)
+            if (s.dataPagamento) return false;
             
             const [ano, mes, dia] = s.dataVencimento.split('-').map(Number);
             const dataVenc = new Date(ano, mes - 1, dia);
@@ -691,6 +692,7 @@ class ModuloSaidas {
         // Atualizar interface
         this.carregarSaidas();
         this.atualizarResumoSaidas();
+        this.verificarContasAVencer();
         if (this.fluxoCaixa && this.fluxoCaixa.atualizarFluxoCaixa) {
             this.fluxoCaixa.atualizarFluxoCaixa();
         }

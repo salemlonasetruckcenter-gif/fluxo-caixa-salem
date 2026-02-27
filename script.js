@@ -1182,6 +1182,8 @@ class FluxoCaixa {
                 moduloSaidas.carregarSaidas();
                 moduloSaidas.atualizarResumoSaidas();
             }
+            // Atualizar lembretes de contas a vencer
+            moduloSaidas.verificarContasAVencer();
         }
         
         this.mostrarAlerta('Alterações salvas com sucesso!', 'success');
