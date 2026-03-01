@@ -11,6 +11,15 @@ class ModuloCRM {
         this.clienteAtual = null;
         this.caminhaoAtual = null;
         this.usuarioId = null;
+        
+        // Flags para evitar múltiplos submits
+        this.salvandoCliente = false;
+        this.salvandoCaminhao = false;
+        this.salvandoOrcamento = false;
+        this.salvandoInteracao = false;
+        
+        // Flag para evitar múltiplos event listeners
+        this.eventListenersConfigurados = false;
     }
 
     async inicializar(usuarioId) {
@@ -37,6 +46,10 @@ class ModuloCRM {
     }
 
     configurarEventListeners() {
+        // Evitar configurar múltiplas vezes
+        if (this.eventListenersConfigurados) return;
+        this.eventListenersConfigurados = true;
+
         // Formulário de Cliente
         const formCliente = document.getElementById('formCliente');
         if (formCliente) {
@@ -321,6 +334,10 @@ class ModuloCRM {
     }
 
     async salvarCliente() {
+        // Evitar duplo submit
+        if (this.salvandoCliente) return;
+        this.salvandoCliente = true;
+
         const id = document.getElementById('clienteId').value;
         
         const cliente = {
@@ -364,6 +381,8 @@ class ModuloCRM {
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }
+        
+        this.salvandoCliente = false;
     }
 
     async verCliente(id) {
@@ -657,11 +676,16 @@ class ModuloCRM {
     }
 
     async salvarCaminhao() {
+        // Evitar duplo submit
+        if (this.salvandoCaminhao) return;
+        this.salvandoCaminhao = true;
+
         const id = document.getElementById('caminhaoId').value;
         const clienteId = document.getElementById('caminhaoClienteId').value;
 
         if (!clienteId) {
             this.mostrarAlerta('Selecione um cliente', 'warning');
+            this.salvandoCaminhao = false;
             return;
         }
 
@@ -695,6 +719,8 @@ class ModuloCRM {
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }
+        
+        this.salvandoCaminhao = false;
     }
 
     async editarCaminhao(id) {
@@ -761,6 +787,10 @@ class ModuloCRM {
     }
 
     async salvarInteracao() {
+        // Evitar duplo submit
+        if (this.salvandoInteracao) return;
+        this.salvandoInteracao = true;
+
         // Converter datetime-local para ISO com timezone correto
         const proximaAcaoInput = document.getElementById('interacaoProximaAcao').value;
         let proximaAcaoISO = null;
@@ -800,6 +830,8 @@ class ModuloCRM {
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }
+        
+        this.salvandoInteracao = false;
     }
 
     async excluirInteracao(id) {
