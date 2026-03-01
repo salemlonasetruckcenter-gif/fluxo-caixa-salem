@@ -899,6 +899,10 @@ class ModuloCRM {
     }
 
     async salvarOrcamento() {
+        // Evitar duplo submit
+        if (this.salvandoOrcamento) return;
+        this.salvandoOrcamento = true;
+
         const id = document.getElementById('orcamentoId').value;
 
         const orcamento = {
@@ -928,6 +932,8 @@ class ModuloCRM {
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }
+        
+        this.salvandoOrcamento = false;
     }
 
     async editarOrcamento(id) {
