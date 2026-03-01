@@ -271,6 +271,21 @@ const databaseCRM = {
         }
     },
     
+    async excluirInteracao(id) {
+        try {
+            const { error } = await supabase
+                .from('interacoes')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Erro ao excluir interação:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
     // ============================================
     // ORÇAMENTOS
     // ============================================
@@ -495,10 +510,10 @@ const databaseCRM = {
             const dataInicioISO = dataInicio.toISOString();
             const agora = new Date().toISOString();
             
-            // Buscar todos os caminhões
+            // Buscar todos os caminhões com dados do cliente
             const { data: caminhoes, error: errCaminhoes } = await supabase
                 .from('caminhoes')
-                .select('id, etapa, proximo_contato_em, updated_at');
+                .select('id, placa, etapa, proximo_contato_em, updated_at, clientes(nome_razao, nome_fantasia)');
             
             if (errCaminhoes) throw errCaminhoes;
             
@@ -507,11 +522,7 @@ const databaseCRM = {
             const negociando = caminhoes.filter(c => c.etapa === 'negociando');
             const gelados = caminhoes.filter(c => c.etapa === 'gelado');
             const perdidos = caminhoes.filter(c => c.etapa === 'perdido' && c.updated_at >= dataInicioISO);
-            const orcamentosSemResposta = caminhoes.filter(c => 
-                c.etapa === 'orcamento_enviado' && 
-                c.proximo_contato_em && 
-                c.proximo_contato_em < agora
-            );
+            const orcamentoEnviado = caminhoes.filter(c => c.etapa === 'orcamento_enviado');
             
             return {
                 success: true,
@@ -520,11 +531,11 @@ const databaseCRM = {
                     negociando: negociando.length,
                     gelados: gelados.length,
                     perdidos: perdidos.length,
-                    orcamentosSemResposta: orcamentosSemResposta.length,
+                    orcamentoEnviado: orcamentoEnviado.length,
                     listaFechados: fechados,
                     listaNegociando: negociando,
                     listaGelados: gelados,
-                    listaOrcamentosSemResposta: orcamentosSemResposta
+                    listaOrcamentoEnviado: orcamentoEnviado
                 }
             };
         } catch (error) {

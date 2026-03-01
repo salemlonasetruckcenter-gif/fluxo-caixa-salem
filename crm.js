@@ -132,13 +132,13 @@ class ModuloCRM {
         this.atualizarCard('cardNegociando', dados.negociando);
         this.atualizarCard('cardGelados', dados.gelados);
         this.atualizarCard('cardPerdidos', dados.perdidos);
-        this.atualizarCard('cardOrcamentosSemResposta', dados.orcamentosSemResposta);
+        this.atualizarCard('cardOrcamentoEnviado', dados.orcamentoEnviado);
 
         // Atualizar listas
         this.renderizarListaDashboard('listaFechados', dados.listaFechados);
         this.renderizarListaDashboard('listaNegociando', dados.listaNegociando);
         this.renderizarListaDashboard('listaGelados', dados.listaGelados);
-        this.renderizarListaDashboard('listaOrcamentosSemResposta', dados.listaOrcamentosSemResposta);
+        this.renderizarListaDashboard('listaOrcamentoEnviado', dados.listaOrcamentoEnviado);
     }
 
     atualizarCard(id, valor) {
@@ -157,12 +157,19 @@ class ModuloCRM {
             return;
         }
 
-        container.innerHTML = lista.slice(0, 5).map(item => `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                <span class="small">${item.placa || 'Sem placa'}</span>
+        container.innerHTML = lista.slice(0, 5).map(item => {
+            const nomeCliente = item.clientes?.nome_fantasia || item.clientes?.nome_razao || '';
+            const placaInfo = item.placa || 'Sem placa';
+            const displayText = nomeCliente ? `${placaInfo} - ${nomeCliente}` : placaInfo;
+            return `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded" 
+                 style="cursor: pointer;" 
+                 onclick="moduloCRM.verCaminhao('${item.id}')"
+                 title="Clique para ver detalhes">
+                <span class="small">${displayText}</span>
                 <span class="badge bg-${databaseCRM.getEtapaCor(item.etapa)}">${databaseCRM.getEtapaLabel(item.etapa)}</span>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     // ============================================
@@ -422,8 +429,14 @@ class ModuloCRM {
                         <td>${numeroPedido}</td>
                         <td>${caminhao.proximo_contato_em ? this.formatarDataHora(caminhao.proximo_contato_em) : '-'}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="moduloCRM.verCaminhao('${caminhao.id}')" title="Ver">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="moduloCRM.verCaminhao('${caminhao.id}')" title="Ver">
                                 <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="moduloCRM.editarCaminhao('${caminhao.id}')" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="moduloCRM.excluirCaminhao('${caminhao.id}')" title="Excluir">
+                                <i class="bi bi-trash"></i>
                             </button>
                         </td>
                     `;
@@ -529,7 +542,7 @@ class ModuloCRM {
         document.getElementById('detalheCaminhaoTipo').textContent = caminhao.tipo || '-';
         document.getElementById('detalheCaminhaoModelo').textContent = caminhao.marca_modelo || '-';
         document.getElementById('detalheCaminhaoLona').textContent = caminhao.tipo_lona || '-';
-        document.getElementById('detalheCaminhaoUltimaTroca').textContent = caminhao.data_ultima_troca ? this.formatarData(caminhao.data_ultima_troca) : '-';
+        document.getElementById('detalheCaminhaoUltimoServico').textContent = caminhao.data_ultima_troca ? this.formatarData(caminhao.data_ultima_troca) : '-';
         document.getElementById('detalheCaminhaoCliente').textContent = caminhao.clientes?.nome_razao || '-';
 
         // Pipeline
@@ -560,12 +573,18 @@ class ModuloCRM {
             } else {
                 listaInteracoes.innerHTML = interacoes.map(i => `
                     <div class="border-start border-3 border-primary ps-3 mb-3">
-                        <div class="d-flex justify-content-between">
-                            <strong>${this.getTipoInteracaoLabel(i.tipo)}</strong>
-                            <small class="text-muted">${this.formatarDataHora(i.created_at)}</small>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>${this.getTipoInteracaoLabel(i.tipo)}</strong>
+                                <small class="text-muted ms-2">${this.formatarDataHora(i.created_at)}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); moduloCRM.excluirInteracao('${i.id}')" title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                         <p class="mb-1">${i.resumo || '-'}</p>
                         <span class="badge bg-secondary">${this.getResultadoLabel(i.resultado)}</span>
+                        ${i.proxima_acao_em ? `<small class="text-muted d-block mt-1"><i class="bi bi-calendar-event me-1"></i>Agendado: ${this.formatarDataHora(i.proxima_acao_em)}</small>` : ''}
                     </div>
                 `).join('');
             }
@@ -578,7 +597,7 @@ class ModuloCRM {
                 listaOrcamentos.innerHTML = '<p class="text-muted">Nenhum orçamento</p>';
             } else {
                 listaOrcamentos.innerHTML = orcamentos.map(o => `
-                    <div class="card mb-2">
+                    <div class="card mb-2" style="cursor: pointer;" onclick="moduloCRM.editarOrcamento('${o.id}')" title="Clique para editar">
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
@@ -652,7 +671,7 @@ class ModuloCRM {
             tipo: document.getElementById('caminhaoTipo').value.trim() || null,
             marca_modelo: document.getElementById('caminhaoMarcaModelo').value.trim() || null,
             tipo_lona: document.getElementById('caminhaoTipoLona').value.trim() || null,
-            data_ultima_troca: document.getElementById('caminhaoUltimaTroca').value || null,
+            data_ultima_troca: document.getElementById('caminhaoUltimoServico').value || null,
             ciclo_meses: parseInt(document.getElementById('caminhaoCicloMeses').value) || 12
         };
 
@@ -678,6 +697,51 @@ class ModuloCRM {
         }
     }
 
+    async editarCaminhao(id) {
+        const resultado = await databaseCRM.buscarCaminhao(id);
+        if (!resultado.success) {
+            this.mostrarAlerta('Erro ao carregar caminhão', 'danger');
+            return;
+        }
+
+        const caminhao = resultado.data;
+        this.caminhaoAtual = caminhao;
+
+        document.getElementById('caminhaoId').value = caminhao.id;
+        document.getElementById('caminhaoClienteId').value = caminhao.cliente_id;
+        document.getElementById('caminhaoPlaca').value = caminhao.placa || '';
+        document.getElementById('caminhaoTipo').value = caminhao.tipo || '';
+        document.getElementById('caminhaoMarcaModelo').value = caminhao.marca_modelo || '';
+        document.getElementById('caminhaoTipoLona').value = caminhao.tipo_lona || '';
+        document.getElementById('caminhaoUltimoServico').value = caminhao.data_ultima_troca || '';
+        document.getElementById('caminhaoCicloMeses').value = caminhao.ciclo_meses || 12;
+
+        document.getElementById('modalCaminhaoTitulo').textContent = 'Editar Caminhão';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalCaminhao'));
+        modal.show();
+    }
+
+    async excluirCaminhao(id) {
+        if (!confirm('Tem certeza que deseja excluir este caminhão? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        const resultado = await databaseCRM.excluirCaminhao(id);
+        
+        if (resultado.success) {
+            this.mostrarAlerta('Caminhão excluído!', 'success');
+            
+            // Atualizar lista de caminhões do cliente se estiver aberta
+            if (this.clienteAtual) {
+                const caminhoes = await databaseCRM.carregarCaminhoes(this.clienteAtual.id);
+                this.renderizarDetalheCliente(this.clienteAtual, caminhoes.data || []);
+            }
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+    }
+
     // ============================================
     // INTERAÇÕES
     // ============================================
@@ -697,13 +761,22 @@ class ModuloCRM {
     }
 
     async salvarInteracao() {
+        // Converter datetime-local para ISO com timezone correto
+        const proximaAcaoInput = document.getElementById('interacaoProximaAcao').value;
+        let proximaAcaoISO = null;
+        if (proximaAcaoInput) {
+            // datetime-local retorna "2026-03-05T21:40" - converter para ISO mantendo o horário local
+            const dataLocal = new Date(proximaAcaoInput);
+            proximaAcaoISO = dataLocal.toISOString();
+        }
+
         const interacao = {
             caminhao_id: document.getElementById('interacaoCaminhaoId').value,
             cliente_id: document.getElementById('interacaoClienteId').value,
             tipo: document.getElementById('interacaoTipo').value,
             resultado: document.getElementById('interacaoResultado').value,
             resumo: document.getElementById('interacaoResumo').value.trim() || null,
-            proxima_acao_em: document.getElementById('interacaoProximaAcao').value || null
+            proxima_acao_em: proximaAcaoISO
         };
 
         const resultado = await databaseCRM.salvarInteracao(interacao);
@@ -715,7 +788,8 @@ class ModuloCRM {
             if (interacao.proxima_acao_em) {
                 await databaseCRM.atualizarCaminhao(interacao.caminhao_id, {
                     proximo_contato_em: interacao.proxima_acao_em,
-                    canal_proximo_contato: interacao.tipo
+                    canal_proximo_contato: interacao.tipo,
+                    motivo: interacao.resumo
                 });
             }
 
@@ -723,6 +797,25 @@ class ModuloCRM {
             this.verCaminhao(interacao.caminhao_id);
             
             this.mostrarAlerta('Interação registrada!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+    }
+
+    async excluirInteracao(id) {
+        if (!confirm('Tem certeza que deseja excluir esta interação?')) {
+            return;
+        }
+
+        const resultado = await databaseCRM.excluirInteracao(id);
+        
+        if (resultado.success) {
+            this.mostrarAlerta('Interação excluída!', 'success');
+            
+            // Recarregar detalhes do caminhão
+            if (this.caminhaoAtual) {
+                this.verCaminhao(this.caminhaoAtual.id);
+            }
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }
@@ -764,6 +857,9 @@ class ModuloCRM {
                             <i class="bi bi-check-lg"></i>
                         </button>
                     ` : ''}
+                    <button class="btn btn-sm btn-outline-danger me-1" onclick="moduloCRM.excluirOrcamento('${orcamento.id}')" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-secondary" onclick="moduloCRM.enviarBling('${orcamento.id}')" title="Enviar para Bling" disabled>
                         <i class="bi bi-cloud-upload"></i>
                     </button>
@@ -869,6 +965,29 @@ class ModuloCRM {
         if (resultado.success) {
             this.renderizarOrcamentos();
             this.mostrarAlerta('Orçamento aprovado!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+    }
+
+    async excluirOrcamento(id) {
+        if (!confirm('Tem certeza que deseja excluir este orçamento? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        const resultado = await databaseCRM.excluirOrcamento(id);
+        
+        if (resultado.success) {
+            this.renderizarOrcamentos();
+            
+            // Atualizar lista de orçamentos do caminhão se estiver aberta
+            if (this.caminhaoAtual) {
+                const orcamentos = await databaseCRM.carregarOrcamentos({ caminhaoId: this.caminhaoAtual.id });
+                const interacoes = await databaseCRM.carregarInteracoes(this.caminhaoAtual.id);
+                this.renderizarDetalheCaminhao(this.caminhaoAtual, interacoes.data || [], orcamentos.data || []);
+            }
+            
+            this.mostrarAlerta('Orçamento excluído!', 'success');
         } else {
             this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
         }

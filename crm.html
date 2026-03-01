@@ -216,10 +216,13 @@
                             </div>
                         </div>
                         <div class="col-md-4 col-lg">
-                            <div class="card card-dashboard border-start border-warning border-4">
+                            <div class="card card-dashboard border-start border-warning border-4" 
+                                 style="cursor: pointer;" 
+                                 onclick="navegarPara('orcamentos')"
+                                 title="Clique para ver orçamentos">
                                 <div class="card-body">
-                                    <h6 class="text-muted mb-2">Sem Resposta</h6>
-                                    <h2 class="text-warning mb-0" id="cardOrcamentosSemResposta">0</h2>
+                                    <h6 class="text-muted mb-2">Orçamento Enviado</h6>
+                                    <h2 class="text-warning mb-0" id="cardOrcamentoEnviado">0</h2>
                                 </div>
                             </div>
                         </div>
@@ -259,10 +262,10 @@
                         </div>
                         <div class="col-md-6">
                             <div class="card">
-                                <div class="card-header bg-warning">
-                                    <i class="bi bi-clock me-2"></i>Orçamentos Sem Resposta
+                                <div class="card-header bg-warning" style="cursor: pointer;" onclick="navegarPara('orcamentos')" title="Clique para ver orçamentos">
+                                    <i class="bi bi-file-text me-2"></i>Orçamento Enviado
                                 </div>
-                                <div class="card-body" id="listaOrcamentosSemResposta" style="max-height: 250px; overflow-y: auto;">
+                                <div class="card-body" id="listaOrcamentoEnviado" style="max-height: 250px; overflow-y: auto;">
                                     <p class="text-muted">Carregando...</p>
                                 </div>
                             </div>
@@ -434,8 +437,8 @@
                                 <input type="text" class="form-control" id="clienteNomeFantasia">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">CPF/CNPJ</label>
-                                <input type="text" class="form-control" id="clienteCpfCnpj">
+                                <label class="form-label">CPF/CNPJ *</label>
+                                <input type="text" class="form-control" id="clienteCpfCnpj" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">IE</label>
@@ -459,8 +462,8 @@
                                 <input type="email" class="form-control" id="clienteEmailFinanceiro">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Telefone</label>
-                                <input type="text" class="form-control" id="clienteTelefone">
+                                <label class="form-label">Telefone *</label>
+                                <input type="text" class="form-control" id="clienteTelefone" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">WhatsApp</label>
@@ -506,9 +509,8 @@
                             <div class="col-md-4">
                                 <label class="form-label">Classificação</label>
                                 <select class="form-select" id="clienteClassificacao">
-                                    <option value="normal">Normal</option>
-                                    <option value="vip">VIP</option>
-                                    <option value="risco">Risco</option>
+                                    <option value="autonomo">Autônomo</option>
+                                    <option value="empresa">Empresa</option>
                                 </select>
                             </div>
                             <div class="col-md-8">
@@ -567,7 +569,7 @@
                                 <tr>
                                     <th>Placa</th>
                                     <th>Tipo</th>
-                                    <th>Última Troca</th>
+                                    <th>Último Serviço</th>
                                     <th>Etapa</th>
                                     <th>N° Pedido</th>
                                     <th>Próximo Contato</th>
@@ -614,8 +616,8 @@
                                 <input type="text" class="form-control" id="caminhaoTipoLona">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Última Troca</label>
-                                <input type="date" class="form-control" id="caminhaoUltimaTroca">
+                                <label class="form-label">Último Serviço</label>
+                                <input type="date" class="form-control" id="caminhaoUltimoServico">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Ciclo (meses)</label>
@@ -634,7 +636,7 @@
 
     <!-- Modal Detalhe Caminhão -->
     <div class="modal fade" id="modalDetalheCaminhao" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -653,7 +655,7 @@
                         </div>
                         <div class="col-md-6">
                             <p><strong>Tipo Lona:</strong> <span id="detalheCaminhaoLona">-</span></p>
-                            <p><strong>Última Troca:</strong> <span id="detalheCaminhaoUltimaTroca">-</span></p>
+                            <p><strong>Último Serviço:</strong> <span id="detalheCaminhaoUltimoServico">-</span></p>
                             <a href="#" id="btnWhatsappCaminhao" target="_blank" class="btn btn-success btn-sm d-none">
                                 <i class="bi bi-whatsapp me-1"></i>WhatsApp
                             </a>
