@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salém Gestão - CRM Comercial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 4px 10px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+        .card-dashboard {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .card-dashboard:hover {
+            transform: translateY(-2px);
+        }
+        .card-dashboard .card-body {
+            padding: 20px;
+        }
+        .card-dashboard h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .pipeline-btn {
+            min-width: 100px;
+        }
+        .table-crm th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-vip { background: linear-gradient(135deg, #f39c12, #e74c3c); }
+        .badge-risco { background: #e74c3c; }
+        .user-info {
+            padding: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: auto;
+        }
+        .content-area {
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="telaLogin" class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+        <div class="card shadow-lg" style="width: 400px;">
+            <div class="card-body p-5">
+                <h3 class="text-center mb-4">
+                    <i class="bi bi-truck text-primary"></i> Salém Gestão
+                </h3>
+                <p class="text-center text-muted mb-4">Faça login para continuar</p>
+                
+                <ul class="nav nav-pills nav-justified mb-4" id="authTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#loginForm">Entrar</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#registerForm">Criar Conta</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="loginForm">
+                        <form id="formLogin">
+                            <div class="mb-3">
+                                <label class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="loginEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="loginSenha" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="registerForm">
+                        <form id="formRegistro">
+                            <div class="mb-3">
+                                <label class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="registroEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="registroSenha" required minlength="6">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Criar Conta</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema Principal -->
+    <div id="sistemaPrincipal" class="d-none">
+        <div class="d-flex">
+            <!-- Sidebar -->
+            <div class="sidebar d-flex flex-column" style="width: 250px;">
+                <div class="p-4">
+                    <h4 class="text-white mb-0">
+                        <i class="bi bi-truck"></i> Salém Gestão
+                    </h4>
+                    <small class="text-white-50">CRM Comercial</small>
+                </div>
+                
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#" onclick="navegarPara('dashboard')">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="#" onclick="navegarPara('clientes')">
+                        <i class="bi bi-people"></i> Clientes
+                    </a>
+                    <a class="nav-link" href="#" onclick="navegarPara('agenda')">
+                        <i class="bi bi-calendar-check"></i> Agenda
+                    </a>
+                    <a class="nav-link" href="#" onclick="navegarPara('orcamentos')">
+                        <i class="bi bi-file-text"></i> Orçamentos
+                    </a>
+                    <hr class="my-3 mx-3 border-secondary">
+                    <a class="nav-link" href="index.html">
+                        <i class="bi bi-cash-stack"></i> Fluxo de Caixa
+                    </a>
+                </nav>
+                
+                <div class="user-info">
+                    <div class="d-flex align-items-center text-white">
+                        <i class="bi bi-person-circle fs-4 me-2"></i>
+                        <div>
+                            <small id="userEmail" class="d-block">usuario@email.com</small>
+                            <a href="#" onclick="fazerLogout()" class="text-white-50 small">Sair</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="content-area flex-grow-1 p-4">
+                <!-- Alertas -->
+                <div id="alertContainer"></div>
+
+                <!-- Dashboard -->
+                <div id="secaoDashboard" class="page-section active">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Comercial</h4>
+                        <select class="form-select" style="width: 150px;" id="filtroDashboard">
+                            <option value="hoje">Hoje</option>
+                            <option value="7dias">7 dias</option>
+                            <option value="30dias" selected>30 dias</option>
+                            <option value="mes">Mês atual</option>
+                        </select>
+                    </div>
+
+                    <!-- Cards -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4 col-lg">
+                            <div class="card card-dashboard border-start border-success border-4">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Fechados</h6>
+                                    <h2 class="text-success mb-0" id="cardFechados">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg">
+                            <div class="card card-dashboard border-start border-primary border-4">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Negociando</h6>
+                                    <h2 class="text-primary mb-0" id="cardNegociando">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg">
+                            <div class="card card-dashboard border-start border-dark border-4">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Gelados</h6>
+                                    <h2 class="text-dark mb-0" id="cardGelados">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg">
+                            <div class="card card-dashboard border-start border-danger border-4">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Perdidos</h6>
+                                    <h2 class="text-danger mb-0" id="cardPerdidos">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-lg">
+                            <div class="card card-dashboard border-start border-warning border-4">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Sem Resposta</h6>
+                                    <h2 class="text-warning mb-0" id="cardOrcamentosSemResposta">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Listas -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <i class="bi bi-check-circle me-2"></i>Fechados Recentes
+                                </div>
+                                <div class="card-body" id="listaFechados" style="max-height: 250px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="bi bi-chat-dots me-2"></i>Em Negociação
+                                </div>
+                                <div class="card-body" id="listaNegociando" style="max-height: 250px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">
+                                    <i class="bi bi-snow me-2"></i>Gelados para Retomar
+                                </div>
+                                <div class="card-body" id="listaGelados" style="max-height: 250px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning">
+                                    <i class="bi bi-clock me-2"></i>Orçamentos Sem Resposta
+                                </div>
+                                <div class="card-body" id="listaOrcamentosSemResposta" style="max-height: 250px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clientes -->
+                <div id="secaoClientes" class="page-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0"><i class="bi bi-people me-2"></i>Clientes</h4>
+                        <button class="btn btn-primary" onclick="moduloCRM.novoCliente()">
+                            <i class="bi bi-plus-lg me-1"></i>Novo Cliente
+                        </button>
+                    </div>
+
+                    <!-- Filtros -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="buscaClientes" placeholder="Buscar por nome, CPF/CNPJ...">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="filtroClassificacao">
+                                        <option value="">Todas classificações</option>
+                                        <option value="vip">VIP</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="risco">Risco</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-secondary w-100" disabled title="Integração futura">
+                                        <i class="bi bi-cloud-upload me-1"></i>Exportar Bling
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela -->
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-crm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome/Razão Social</th>
+                                            <th>CPF/CNPJ</th>
+                                            <th>Telefone</th>
+                                            <th>Cidade</th>
+                                            <th>Classificação</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="corpoTabelaClientes">
+                                        <tr><td colspan="6" class="text-center text-muted py-4">Carregando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agenda -->
+                <div id="secaoAgenda" class="page-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Agenda de Contatos</h4>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>Atrasados
+                                </div>
+                                <div class="card-body" id="agendaAtrasados" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning">
+                                    <i class="bi bi-clock me-2"></i>Hoje
+                                </div>
+                                <div class="card-body" id="agendaHoje" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <i class="bi bi-calendar me-2"></i>Próximos
+                                </div>
+                                <div class="card-body" id="agendaProximos" style="max-height: 400px; overflow-y: auto;">
+                                    <p class="text-muted">Carregando...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orçamentos -->
+                <div id="secaoOrcamentos" class="page-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="mb-0"><i class="bi bi-file-text me-2"></i>Orçamentos</h4>
+                        <button class="btn btn-primary" onclick="moduloCRM.novoOrcamento()">
+                            <i class="bi bi-plus-lg me-1"></i>Novo Orçamento
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-crm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Cliente</th>
+                                            <th>Caminhão</th>
+                                            <th>Valor</th>
+                                            <th>Status</th>
+                                            <th>N° Pedido</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="corpoTabelaOrcamentos">
+                                        <tr><td colspan="7" class="text-center text-muted py-4">Carregando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cliente -->
+    <div class="modal fade" id="modalCliente" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalClienteTitulo">Novo Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formCliente">
+                    <div class="modal-body">
+                        <input type="hidden" id="clienteId">
+                        
+                        <!-- Dados Básicos -->
+                        <h6 class="text-muted mb-3"><i class="bi bi-person me-2"></i>Dados Básicos</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="clienteTipoPessoa">
+                                    <option value="F">Pessoa Física</option>
+                                    <option value="J">Pessoa Jurídica</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Nome/Razão Social *</label>
+                                <input type="text" class="form-control" id="clienteNomeRazao" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nome Fantasia</label>
+                                <input type="text" class="form-control" id="clienteNomeFantasia">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">CPF/CNPJ</label>
+                                <input type="text" class="form-control" id="clienteCpfCnpj">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">IE</label>
+                                <input type="text" class="form-control" id="clienteIe">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">IM</label>
+                                <input type="text" class="form-control" id="clienteIm">
+                            </div>
+                        </div>
+
+                        <!-- Contatos -->
+                        <h6 class="text-muted mb-3"><i class="bi bi-telephone me-2"></i>Contatos</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="clienteEmail">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">E-mail Financeiro</label>
+                                <input type="email" class="form-control" id="clienteEmailFinanceiro">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="clienteTelefone">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">WhatsApp</label>
+                                <input type="text" class="form-control" id="clienteWhatsapp">
+                            </div>
+                        </div>
+
+                        <!-- Endereço -->
+                        <h6 class="text-muted mb-3"><i class="bi bi-geo-alt me-2"></i>Endereço</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">CEP</label>
+                                <input type="text" class="form-control" id="clienteCep">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Logradouro</label>
+                                <input type="text" class="form-control" id="clienteLogradouro">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Número</label>
+                                <input type="text" class="form-control" id="clienteNumero">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Bairro</label>
+                                <input type="text" class="form-control" id="clienteBairro">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Cidade</label>
+                                <input type="text" class="form-control" id="clienteCidade">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">UF</label>
+                                <input type="text" class="form-control" id="clienteUf" maxlength="2">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Complemento</label>
+                                <input type="text" class="form-control" id="clienteComplemento">
+                            </div>
+                        </div>
+
+                        <!-- Classificação -->
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Classificação</label>
+                                <select class="form-select" id="clienteClassificacao">
+                                    <option value="normal">Normal</option>
+                                    <option value="vip">VIP</option>
+                                    <option value="risco">Risco</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Observação</label>
+                                <textarea class="form-control" id="clienteObservacao" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalhe Cliente -->
+    <div class="modal fade" id="modalDetalheCliente" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person me-2"></i>
+                        <span id="detalheClienteNome">Cliente</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Info do Cliente -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Nome Fantasia:</strong> <span id="detalheClienteFantasia">-</span></p>
+                            <p><strong>CPF/CNPJ:</strong> <span id="detalheClienteCpfCnpj">-</span></p>
+                            <p><strong>Telefone:</strong> <span id="detalheClienteTelefone">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>E-mail:</strong> <span id="detalheClienteEmail">-</span></p>
+                            <p><strong>Endereço:</strong> <span id="detalheClienteEndereco">-</span></p>
+                            <a href="#" id="btnWhatsappCliente" target="_blank" class="btn btn-success d-none">
+                                <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Caminhões -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="bi bi-truck me-2"></i>Caminhões</h6>
+                        <button class="btn btn-sm btn-primary" onclick="moduloCRM.novoCaminhao()">
+                            <i class="bi bi-plus-lg me-1"></i>Adicionar
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Placa</th>
+                                    <th>Tipo</th>
+                                    <th>Última Troca</th>
+                                    <th>Etapa</th>
+                                    <th>N° Pedido</th>
+                                    <th>Próximo Contato</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoTabelaCaminhoesCliente">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Caminhão -->
+    <div class="modal fade" id="modalCaminhao" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCaminhaoTitulo">Novo Caminhão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formCaminhao">
+                    <div class="modal-body">
+                        <input type="hidden" id="caminhaoId">
+                        <input type="hidden" id="caminhaoClienteId">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Placa</label>
+                                <input type="text" class="form-control" id="caminhaoPlaca" style="text-transform: uppercase;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo</label>
+                                <input type="text" class="form-control" id="caminhaoTipo" placeholder="Ex: Truck, Carreta...">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca/Modelo</label>
+                                <input type="text" class="form-control" id="caminhaoMarcaModelo">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Lona</label>
+                                <input type="text" class="form-control" id="caminhaoTipoLona">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Última Troca</label>
+                                <input type="date" class="form-control" id="caminhaoUltimaTroca">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ciclo (meses)</label>
+                                <input type="number" class="form-control" id="caminhaoCicloMeses" value="12">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalhe Caminhão -->
+    <div class="modal fade" id="modalDetalheCaminhao" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-truck me-2"></i>
+                        Caminhão <span id="detalheCaminhaoPlaca">-</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Cliente:</strong> <span id="detalheCaminhaoCliente">-</span></p>
+                            <p><strong>Tipo:</strong> <span id="detalheCaminhaoTipo">-</span></p>
+                            <p><strong>Modelo:</strong> <span id="detalheCaminhaoModelo">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Tipo Lona:</strong> <span id="detalheCaminhaoLona">-</span></p>
+                            <p><strong>Última Troca:</strong> <span id="detalheCaminhaoUltimaTroca">-</span></p>
+                            <a href="#" id="btnWhatsappCaminhao" target="_blank" class="btn btn-success btn-sm d-none">
+                                <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Pipeline -->
+                    <h6 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Pipeline</h6>
+                    <div id="pipelineCaminhao" class="mb-4"></div>
+
+                    <!-- Próximo Contato -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Próximo Contato</small>
+                                    <p class="mb-0" id="detalheCaminhaoProximoContato">-</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Canal</small>
+                                    <p class="mb-0" id="detalheCaminhaoCanal">-</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Motivo</small>
+                                    <p class="mb-0" id="detalheCaminhaoMotivo">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Interações -->
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Interações</h6>
+                                <button class="btn btn-sm btn-outline-primary" onclick="moduloCRM.novaInteracao()">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div id="listaInteracoes" style="max-height: 250px; overflow-y: auto;">
+                            </div>
+                        </div>
+
+                        <!-- Orçamentos -->
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>Orçamentos</h6>
+                                <button class="btn btn-sm btn-outline-primary" onclick="moduloCRM.novoOrcamento()">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div id="listaOrcamentosCaminhao" style="max-height: 250px; overflow-y: auto;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Interação -->
+    <div class="modal fade" id="modalInteracao" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Interação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formInteracao">
+                    <div class="modal-body">
+                        <input type="hidden" id="interacaoCaminhaoId">
+                        <input type="hidden" id="interacaoClienteId">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="interacaoTipo" required>
+                                    <option value="ligacao">Ligação</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="visita">Visita</option>
+                                    <option value="email">E-mail</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Resultado</label>
+                                <select class="form-select" id="interacaoResultado" required>
+                                    <option value="atendeu">Atendeu</option>
+                                    <option value="nao_atendeu">Não atendeu</option>
+                                    <option value="pediu_retorno">Pediu retorno</option>
+                                    <option value="orcamento">Solicitou orçamento</option>
+                                    <option value="negociando">Negociando</option>
+                                    <option value="fechou">Fechou</option>
+                                    <option value="recusou">Recusou</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Resumo</label>
+                                <textarea class="form-control" id="interacaoResumo" rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Próxima Ação</label>
+                                <input type="datetime-local" class="form-control" id="interacaoProximaAcao">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Orçamento -->
+    <div class="modal fade" id="modalOrcamento" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Orçamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formOrcamento">
+                    <div class="modal-body">
+                        <input type="hidden" id="orcamentoId">
+                        <input type="hidden" id="orcamentoClienteId">
+                        <input type="hidden" id="orcamentoCaminhaoId">
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Descrição</label>
+                                <textarea class="form-control" id="orcamentoDescricao" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Valor Material</label>
+                                <input type="number" class="form-control" id="valorMaterial" step="0.01" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Valor Mão de Obra</label>
+                                <input type="number" class="form-control" id="valorMaoObra" step="0.01" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Margem %</label>
+                                <input type="number" class="form-control" id="margemPercent" step="0.01" value="0">
+                            </div>
+                            <div class="col-12">
+                                <div class="alert alert-info mb-0">
+                                    <strong>Valor Final:</strong> <span id="valorFinalCalculado">R$ 0,00</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Forma de Pagamento</label>
+                                <select class="form-select" id="orcamentoFormaPagamento">
+                                    <option value="">Selecione</option>
+                                    <option value="avista">À Vista</option>
+                                    <option value="boleto">Boleto</option>
+                                    <option value="cartao">Cartão</option>
+                                    <option value="pix">PIX</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Parcelas</label>
+                                <input type="number" class="form-control" id="orcamentoParcelas" value="1" min="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Data Prevista</label>
+                                <input type="date" class="form-control" id="orcamentoDataPrevista">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">N° Pedido (manual)</label>
+                                <input type="text" class="form-control" id="orcamentoNumeroPedido" placeholder="Preencher após aprovação">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="database-crm.js"></script>
+    <script src="crm.js"></script>
+    <script>
+        // Navegação
+        function navegarPara(secao) {
+            // Esconder todas as seções
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            
+            // Mostrar seção selecionada
+            document.getElementById('secao' + secao.charAt(0).toUpperCase() + secao.slice(1)).classList.add('active');
+            
+            // Atualizar menu
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Carregar dados da seção
+            switch(secao) {
+                case 'dashboard':
+                    moduloCRM.renderizarDashboard();
+                    break;
+                case 'clientes':
+                    moduloCRM.renderizarClientes();
+                    break;
+                case 'agenda':
+                    moduloCRM.renderizarAgenda();
+                    break;
+                case 'orcamentos':
+                    moduloCRM.renderizarOrcamentos();
+                    break;
+            }
+        }
+
+        // Autenticação
+        async function verificarAuth() {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (user) {
+                document.getElementById('telaLogin').classList.add('d-none');
+                document.getElementById('sistemaPrincipal').classList.remove('d-none');
+                document.getElementById('userEmail').textContent = user.email;
+                
+                await moduloCRM.inicializar(user.id);
+            } else {
+                document.getElementById('telaLogin').classList.remove('d-none');
+                document.getElementById('sistemaPrincipal').classList.add('d-none');
+            }
+        }
+
+        async function fazerLogout() {
+            await supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        // Login
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const senha = document.getElementById('loginSenha').value;
+
+            const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+            
+            if (error) {
+                alert('Erro: ' + error.message);
+            } else {
+                verificarAuth();
+            }
+        });
+
+        // Registro
+        document.getElementById('formRegistro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('registroEmail').value;
+            const senha = document.getElementById('registroSenha').value;
+
+            const { error } = await supabase.auth.signUp({ email, password: senha });
+            
+            if (error) {
+                alert('Erro: ' + error.message);
+            } else {
+                alert('Conta criada! Faça login.');
+                document.querySelector('[data-bs-target="#loginForm"]').click();
+            }
+        });
+
+        // Inicializar
+        verificarAuth();
+
+        // Listener de auth
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                verificarAuth();
+            } else if (event === 'SIGNED_OUT') {
+                window.location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
