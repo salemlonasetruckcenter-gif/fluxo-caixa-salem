@@ -473,6 +473,7 @@ class ModuloCRM {
         document.getElementById('detalheClienteFantasia').textContent = cliente.nome_fantasia || '-';
         document.getElementById('detalheClienteCpfCnpj').textContent = cliente.cpf_cnpj || '-';
         document.getElementById('detalheClienteTelefone').textContent = cliente.telefone || '-';
+        document.getElementById('detalheClienteResponsavel').textContent = cliente.responsavel || '-';
         document.getElementById('detalheClienteEmail').textContent = cliente.email || '-';
         document.getElementById('detalheClienteEndereco').textContent = 
             cliente.logradouro ? `${cliente.logradouro}, ${cliente.numero || 'S/N'} - ${cliente.bairro || ''} - ${cliente.cidade || ''}/${cliente.uf || ''}` : '-';
@@ -628,6 +629,7 @@ class ModuloCRM {
         document.getElementById('detalheCaminhaoLona').textContent = caminhao.tipo_lona || '-';
         document.getElementById('detalheCaminhaoUltimoServico').textContent = caminhao.data_ultima_troca ? this.formatarData(caminhao.data_ultima_troca) : '-';
         document.getElementById('detalheCaminhaoCliente').textContent = caminhao.clientes?.nome_razao || '-';
+        document.getElementById('detalheCaminhaoResponsavel').textContent = caminhao.clientes?.responsavel || '-';
 
         // Pipeline
         this.renderizarPipeline(caminhao.etapa);
