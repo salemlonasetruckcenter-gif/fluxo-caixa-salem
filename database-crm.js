@@ -120,7 +120,7 @@ const databaseCRM = {
                 .from('caminhoes')
                 .select(`
                     *,
-                    clientes (id, nome_razao, nome_fantasia)
+                    clientes (id, nome_razao, nome_fantasia, responsavel)
                 `)
                 .order('created_at', { ascending: false });
             
@@ -152,7 +152,7 @@ const databaseCRM = {
                 .from('caminhoes')
                 .select(`
                     *,
-                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone)
+                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone, responsavel)
                 `)
                 .eq('id', id)
                 .single();
@@ -171,7 +171,7 @@ const databaseCRM = {
                 .from('caminhoes')
                 .select(`
                     *,
-                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone)
+                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone, responsavel)
                 `)
                 .ilike('placa', `%${placa}%`)
                 .limit(1)
@@ -474,7 +474,7 @@ const databaseCRM = {
                 .from('caminhoes')
                 .select(`
                     *,
-                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone)
+                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone, responsavel)
                 `)
                 .not('proximo_contato_em', 'is', null)
                 .order('proximo_contato_em', { ascending: true });
@@ -812,9 +812,9 @@ const databaseCRM = {
 
     getStatusNegociacaoLabel(status) {
         const labels = {
-            'rascunho': 'Rascunho',
-            'enviado': 'Enviado',
+            'orcamento_enviado': 'Orçamento Enviado',
             'negociando': 'Negociando',
+            'gelado': 'Gelado',
             'fechado': 'Fechado',
             'perdido': 'Perdido'
         };
@@ -823,9 +823,9 @@ const databaseCRM = {
 
     getStatusNegociacaoCor(status) {
         const cores = {
-            'rascunho': 'secondary',
-            'enviado': 'info',
+            'orcamento_enviado': 'info',
             'negociando': 'warning',
+            'gelado': 'secondary',
             'fechado': 'success',
             'perdido': 'danger'
         };
