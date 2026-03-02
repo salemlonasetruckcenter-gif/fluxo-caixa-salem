@@ -165,6 +165,26 @@ const databaseCRM = {
         }
     },
     
+    async buscarCaminhaoPorPlaca(placa) {
+        try {
+            const { data, error } = await supabase
+                .from('caminhoes')
+                .select(`
+                    *,
+                    clientes (id, nome_razao, nome_fantasia, whatsapp, telefone)
+                `)
+                .ilike('placa', `%${placa}%`)
+                .limit(1)
+                .single();
+            
+            if (error && error.code !== 'PGRST116') throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao buscar caminhão por placa:', error);
+            return { success: false, error: error.message };
+        }
+    },
+    
     async salvarCaminhao(caminhao) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -603,5 +623,222 @@ const databaseCRM = {
             'risco': 'danger'
         };
         return cores[classificacao] || 'secondary';
+    },
+
+    // ============================================
+    // INTERAÇÕES DO ORÇAMENTO
+    // ============================================
+
+    async carregarInteracoesOrcamento(orcamentoId) {
+        try {
+            const { data, error } = await supabase
+                .from('interacoes_orcamento')
+                .select('*')
+                .eq('orcamento_id', orcamentoId)
+                .order('data', { ascending: false });
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao carregar interações do orçamento:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async salvarInteracaoOrcamento(interacao) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuário não autenticado');
+            
+            interacao.user_id = user.id;
+            interacao.updated_at = new Date().toISOString();
+            
+            const { data, error } = await supabase
+                .from('interacoes_orcamento')
+                .insert([interacao])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao salvar interação do orçamento:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async atualizarInteracaoOrcamento(id, dados) {
+        try {
+            dados.updated_at = new Date().toISOString();
+            
+            const { data, error } = await supabase
+                .from('interacoes_orcamento')
+                .update(dados)
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao atualizar interação do orçamento:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async excluirInteracaoOrcamento(id) {
+        try {
+            const { error } = await supabase
+                .from('interacoes_orcamento')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Erro ao excluir interação do orçamento:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // ============================================
+    // ANEXOS DO ORÇAMENTO
+    // ============================================
+
+    async carregarAnexosOrcamento(orcamentoId) {
+        try {
+            const { data, error } = await supabase
+                .from('anexos_orcamento')
+                .select('*')
+                .eq('orcamento_id', orcamentoId)
+                .order('data_upload', { ascending: false });
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao carregar anexos do orçamento:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async uploadAnexoOrcamento(orcamentoId, arquivo) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuário não autenticado');
+
+            // Gerar nome único para o arquivo
+            const extensao = arquivo.name.split('.').pop().toLowerCase();
+            const nomeUnico = `${user.id}/${orcamentoId}/${Date.now()}_${arquivo.name}`;
+            
+            // Upload para o Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('anexos-orcamentos')
+                .upload(nomeUnico, arquivo);
+            
+            if (uploadError) throw uploadError;
+
+            // Obter URL pública
+            const { data: urlData } = supabase.storage
+                .from('anexos-orcamentos')
+                .getPublicUrl(nomeUnico);
+
+            // Determinar tipo do arquivo
+            let tipoArquivo = 'outro';
+            if (['pdf'].includes(extensao)) tipoArquivo = 'pdf';
+            else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extensao)) tipoArquivo = 'imagem';
+            else if (['doc', 'docx', 'xls', 'xlsx'].includes(extensao)) tipoArquivo = 'doc';
+
+            // Salvar registro no banco
+            const anexo = {
+                user_id: user.id,
+                orcamento_id: orcamentoId,
+                nome_arquivo: arquivo.name,
+                tipo_arquivo: tipoArquivo,
+                url_arquivo: urlData.publicUrl,
+                tamanho_bytes: arquivo.size
+            };
+
+            const { data, error } = await supabase
+                .from('anexos_orcamento')
+                .insert([anexo])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao fazer upload do anexo:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async excluirAnexoOrcamento(id, urlArquivo) {
+        try {
+            // Extrair caminho do arquivo da URL
+            const urlParts = urlArquivo.split('/anexos-orcamentos/');
+            if (urlParts.length > 1) {
+                const caminhoArquivo = urlParts[1];
+                // Tentar excluir do Storage
+                await supabase.storage
+                    .from('anexos-orcamentos')
+                    .remove([caminhoArquivo]);
+            }
+
+            // Excluir registro do banco
+            const { error } = await supabase
+                .from('anexos_orcamento')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Erro ao excluir anexo:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Helpers para interações de orçamento
+    getTipoInteracaoOrcamentoLabel(tipo) {
+        const labels = {
+            'whatsapp': 'WhatsApp',
+            'ligacao': 'Ligação',
+            'visita': 'Visita',
+            'email': 'E-mail',
+            'outro': 'Outro'
+        };
+        return labels[tipo] || tipo;
+    },
+
+    getStatusNegociacaoLabel(status) {
+        const labels = {
+            'rascunho': 'Rascunho',
+            'enviado': 'Enviado',
+            'negociando': 'Negociando',
+            'fechado': 'Fechado',
+            'perdido': 'Perdido'
+        };
+        return labels[status] || status;
+    },
+
+    getStatusNegociacaoCor(status) {
+        const cores = {
+            'rascunho': 'secondary',
+            'enviado': 'info',
+            'negociando': 'warning',
+            'fechado': 'success',
+            'perdido': 'danger'
+        };
+        return cores[status] || 'secondary';
+    },
+
+    getTipoArquivoIcon(tipo) {
+        const icons = {
+            'pdf': 'bi-file-pdf text-danger',
+            'imagem': 'bi-file-image text-primary',
+            'doc': 'bi-file-word text-primary',
+            'outro': 'bi-file-earmark text-secondary'
+        };
+        return icons[tipo] || 'bi-file-earmark';
     }
 };

@@ -17,6 +17,10 @@ class ModuloCRM {
         this.salvandoCaminhao = false;
         this.salvandoOrcamento = false;
         this.salvandoInteracao = false;
+        this.salvandoInteracaoOrc = false;
+        
+        // Orçamento atual para detalhe
+        this.orcamentoAtual = null;
         
         // Flag para evitar múltiplos event listeners
         this.eventListenersConfigurados = false;
@@ -83,6 +87,15 @@ class ModuloCRM {
             formInteracao.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.salvarInteracao();
+            });
+        }
+
+        // Formulário de Interação do Orçamento
+        const formInteracaoOrcamento = document.getElementById('formInteracaoOrcamento');
+        if (formInteracaoOrcamento) {
+            formInteracaoOrcamento.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.salvarInteracaoOrcamento();
             });
         }
 
@@ -206,12 +219,13 @@ class ModuloCRM {
         this.clientes.forEach(cliente => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td><input type="checkbox" class="cliente-checkbox" value="${cliente.id}" onchange="moduloCRM.atualizarSelecao()"></td>
                 <td>
                     <strong>${cliente.nome_razao}</strong>
                     ${cliente.nome_fantasia ? `<br><small class="text-muted">${cliente.nome_fantasia}</small>` : ''}
                 </td>
                 <td>${cliente.cpf_cnpj || '-'}</td>
-                <td>${cliente.telefone || '-'}</td>
+                <td>${cliente.whatsapp || cliente.telefone || '-'}</td>
                 <td>${cliente.cidade || '-'}${cliente.uf ? '/' + cliente.uf : ''}</td>
                 <td><span class="badge bg-${databaseCRM.getClassificacaoCor(cliente.classificacao)}">${databaseCRM.getClassificacaoLabel(cliente.classificacao)}</span></td>
                 <td>
@@ -246,6 +260,47 @@ class ModuloCRM {
         const resultado = await databaseCRM.carregarClientes(filtros);
         this.clientes = resultado.data || [];
         this.renderizarTabelaClientes();
+    }
+
+    // Seleção de clientes para exportação Bling
+    selecionarTodosClientes(checked) {
+        const checkboxes = document.querySelectorAll('.cliente-checkbox');
+        checkboxes.forEach(cb => cb.checked = checked);
+    }
+
+    atualizarSelecao() {
+        const checkboxes = document.querySelectorAll('.cliente-checkbox');
+        const selecionarTodos = document.getElementById('selecionarTodosClientes');
+        const todosSelecionados = Array.from(checkboxes).every(cb => cb.checked);
+        if (selecionarTodos) {
+            selecionarTodos.checked = todosSelecionados;
+        }
+    }
+
+    exportarSelecionadosBling() {
+        const checkboxes = document.querySelectorAll('.cliente-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (ids.length === 0) {
+            this.mostrarAlerta('Selecione pelo menos um cliente para exportar', 'warning');
+            return;
+        }
+
+        // Por enquanto, apenas mostra mensagem - integração futura
+        this.mostrarAlerta(`${ids.length} cliente(s) selecionado(s) para exportação. Integração com Bling será implementada em breve!`, 'info');
+    }
+
+    // Busca de placas
+    async buscarPorPlaca(placa) {
+        if (!placa || placa.length < 2) {
+            this.renderizarDashboard();
+            return;
+        }
+
+        const resultado = await databaseCRM.buscarCaminhaoPorPlaca(placa.toUpperCase());
+        if (resultado.success && resultado.data) {
+            this.verCaminhao(resultado.data.id);
+        }
     }
 
     renderizarTabelaClientes() {
@@ -584,31 +639,6 @@ class ModuloCRM {
             }
         }
 
-        // Histórico de interações
-        const listaInteracoes = document.getElementById('listaInteracoes');
-        if (listaInteracoes) {
-            if (interacoes.length === 0) {
-                listaInteracoes.innerHTML = '<p class="text-muted">Nenhuma interação registrada</p>';
-            } else {
-                listaInteracoes.innerHTML = interacoes.map(i => `
-                    <div class="border-start border-3 border-primary ps-3 mb-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong>${this.getTipoInteracaoLabel(i.tipo)}</strong>
-                                <small class="text-muted ms-2">${this.formatarDataHora(i.created_at)}</small>
-                            </div>
-                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); moduloCRM.excluirInteracao('${i.id}')" title="Excluir">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                        <p class="mb-1">${i.resumo || '-'}</p>
-                        <span class="badge bg-secondary">${this.getResultadoLabel(i.resultado)}</span>
-                        ${i.proxima_acao_em ? `<small class="text-muted d-block mt-1"><i class="bi bi-calendar-event me-1"></i>Agendado: ${this.formatarDataHora(i.proxima_acao_em)}</small>` : ''}
-                    </div>
-                `).join('');
-            }
-        }
-
         // Orçamentos
         const listaOrcamentos = document.getElementById('listaOrcamentosCaminhao');
         if (listaOrcamentos) {
@@ -616,7 +646,7 @@ class ModuloCRM {
                 listaOrcamentos.innerHTML = '<p class="text-muted">Nenhum orçamento</p>';
             } else {
                 listaOrcamentos.innerHTML = orcamentos.map(o => `
-                    <div class="card mb-2" style="cursor: pointer;" onclick="moduloCRM.editarOrcamento('${o.id}')" title="Clique para editar">
+                    <div class="card mb-2" style="cursor: pointer;" onclick="moduloCRM.verDetalheOrcamento('${o.id}')" title="Clique para ver detalhes e interações">
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
@@ -696,7 +726,7 @@ class ModuloCRM {
             marca_modelo: document.getElementById('caminhaoMarcaModelo').value.trim() || null,
             tipo_lona: document.getElementById('caminhaoTipoLona').value.trim() || null,
             data_ultima_troca: document.getElementById('caminhaoUltimoServico').value || null,
-            ciclo_meses: parseInt(document.getElementById('caminhaoCicloMeses').value) || 12
+            motorista: document.getElementById('caminhaoMotorista').value.trim() || null
         };
 
         let resultado;
@@ -740,7 +770,7 @@ class ModuloCRM {
         document.getElementById('caminhaoMarcaModelo').value = caminhao.marca_modelo || '';
         document.getElementById('caminhaoTipoLona').value = caminhao.tipo_lona || '';
         document.getElementById('caminhaoUltimoServico').value = caminhao.data_ultima_troca || '';
-        document.getElementById('caminhaoCicloMeses').value = caminhao.ciclo_meses || 12;
+        document.getElementById('caminhaoMotorista').value = caminhao.motorista || '';
 
         document.getElementById('modalCaminhaoTitulo').textContent = 'Editar Caminhão';
         
@@ -873,27 +903,28 @@ class ModuloCRM {
 
         this.orcamentos.forEach(orcamento => {
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td>${this.formatarData(orcamento.created_at)}</td>
-                <td>${orcamento.clientes?.nome_razao || '-'}</td>
-                <td>${orcamento.caminhoes?.placa || '-'}</td>
-                <td><strong>R$ ${this.formatarDinheiro(orcamento.valor_final)}</strong></td>
-                <td><span class="badge bg-${this.getStatusOrcamentoCor(orcamento.status)}">${this.getStatusOrcamentoLabel(orcamento.status)}</span></td>
-                <td>${orcamento.numero_pedido || '-'}</td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')">${this.formatarData(orcamento.created_at)}</td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')">${orcamento.clientes?.nome_razao || '-'}</td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')">${orcamento.caminhoes?.placa || '-'}</td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')"><strong>R$ ${this.formatarDinheiro(orcamento.valor_final)}</strong></td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')"><span class="badge bg-${this.getStatusOrcamentoCor(orcamento.status)}">${this.getStatusOrcamentoLabel(orcamento.status)}</span></td>
+                <td onclick="moduloCRM.verDetalheOrcamento('${orcamento.id}')">${orcamento.numero_pedido || '-'}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="moduloCRM.editarOrcamento('${orcamento.id}')" title="Editar">
+                    <button class="btn btn-sm btn-outline-info me-1" onclick="event.stopPropagation(); moduloCRM.verDetalheOrcamento('${orcamento.id}')" title="Ver Detalhes">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation(); moduloCRM.editarOrcamento('${orcamento.id}')" title="Editar">
                         <i class="bi bi-pencil"></i>
                     </button>
                     ${orcamento.status === 'rascunho' ? `
-                        <button class="btn btn-sm btn-outline-success me-1" onclick="moduloCRM.aprovarOrcamento('${orcamento.id}')" title="Aprovar">
+                        <button class="btn btn-sm btn-outline-success me-1" onclick="event.stopPropagation(); moduloCRM.aprovarOrcamento('${orcamento.id}')" title="Aprovar">
                             <i class="bi bi-check-lg"></i>
                         </button>
                     ` : ''}
-                    <button class="btn btn-sm btn-outline-danger me-1" onclick="moduloCRM.excluirOrcamento('${orcamento.id}')" title="Excluir">
+                    <button class="btn btn-sm btn-outline-danger me-1" onclick="event.stopPropagation(); moduloCRM.excluirOrcamento('${orcamento.id}')" title="Excluir">
                         <i class="bi bi-trash"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="moduloCRM.enviarBling('${orcamento.id}')" title="Enviar para Bling" disabled>
-                        <i class="bi bi-cloud-upload"></i>
                     </button>
                 </td>
             `;
@@ -940,6 +971,7 @@ class ModuloCRM {
         const orcamento = {
             cliente_id: document.getElementById('orcamentoClienteId').value || null,
             caminhao_id: document.getElementById('orcamentoCaminhaoId').value || null,
+            tipo: document.getElementById('orcamentoTipo').value || 'proposta',
             descricao: document.getElementById('orcamentoDescricao').value.trim() || null,
             valor_material: parseFloat(document.getElementById('valorMaterial').value) || 0,
             valor_mao_obra: parseFloat(document.getElementById('valorMaoObra').value) || 0,
@@ -980,6 +1012,7 @@ class ModuloCRM {
         document.getElementById('orcamentoId').value = orcamento.id;
         document.getElementById('orcamentoClienteId').value = orcamento.cliente_id || '';
         document.getElementById('orcamentoCaminhaoId').value = orcamento.caminhao_id || '';
+        document.getElementById('orcamentoTipo').value = orcamento.tipo || 'proposta';
         document.getElementById('orcamentoDescricao').value = orcamento.descricao || '';
         document.getElementById('valorMaterial').value = orcamento.valor_material || 0;
         document.getElementById('valorMaoObra').value = orcamento.valor_mao_obra || 0;
@@ -1033,6 +1066,275 @@ class ModuloCRM {
 
     enviarBling(id) {
         this.mostrarAlerta('Integração com Bling será implementada em breve!', 'info');
+    }
+
+    // ============================================
+    // DETALHE DO ORÇAMENTO (com Interações e Anexos)
+    // ============================================
+
+    async verDetalheOrcamento(id) {
+        const resultado = await databaseCRM.buscarOrcamento(id);
+        if (!resultado.success) {
+            this.mostrarAlerta('Erro ao carregar orçamento', 'danger');
+            return;
+        }
+
+        this.orcamentoAtual = resultado.data;
+        const orcamento = resultado.data;
+
+        // Preencher dados do orçamento
+        document.getElementById('detalheOrcamentoNumero').textContent = orcamento.numero_pedido || `#${orcamento.id.substring(0, 8)}`;
+        document.getElementById('detalheOrcamentoCliente').textContent = orcamento.clientes?.nome_razao || orcamento.clientes?.nome_fantasia || '-';
+        document.getElementById('detalheOrcamentoTipo').textContent = orcamento.tipo === 'pedido_venda' ? 'Pedido de Venda' : 'Proposta';
+        
+        const valorFinal = this.calcularValorOrcamento(orcamento);
+        document.getElementById('detalheOrcamentoValor').textContent = `R$ ${this.formatarDinheiro(valorFinal)}`;
+        
+        const statusEl = document.getElementById('detalheOrcamentoStatus');
+        statusEl.textContent = databaseCRM.getStatusNegociacaoLabel(orcamento.status) || orcamento.status;
+        statusEl.className = `badge bg-${databaseCRM.getStatusNegociacaoCor(orcamento.status)}`;
+        
+        document.getElementById('detalheOrcamentoData').textContent = orcamento.created_at ? this.formatarData(orcamento.created_at) : '-';
+        document.getElementById('detalheOrcamentoDescricao').textContent = orcamento.descricao || '-';
+
+        // Carregar interações e anexos
+        await this.carregarInteracoesOrcamento(id);
+        await this.carregarAnexosOrcamento(id);
+
+        // Abrir modal
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalheOrcamento'));
+        modal.show();
+    }
+
+    calcularValorOrcamento(orcamento) {
+        const valorMaterial = parseFloat(orcamento.valor_material) || 0;
+        const valorMaoObra = parseFloat(orcamento.valor_mao_obra) || 0;
+        const margemPercent = parseFloat(orcamento.margem_percent) || 0;
+        
+        let valorFinal = valorMaterial + valorMaoObra;
+        if (margemPercent > 0) {
+            valorFinal = valorFinal * (1 + margemPercent / 100);
+        }
+        return valorFinal;
+    }
+
+    async carregarInteracoesOrcamento(orcamentoId) {
+        const resultado = await databaseCRM.carregarInteracoesOrcamento(orcamentoId);
+        const interacoes = resultado.data || [];
+        
+        document.getElementById('contadorInteracoesOrc').textContent = interacoes.length;
+        
+        const container = document.getElementById('listaInteracoesOrcamento');
+        if (interacoes.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center mb-0">Nenhuma interação registrada</p>';
+            return;
+        }
+
+        container.innerHTML = interacoes.map(i => `
+            <div class="border-start border-3 border-${this.getTipoInteracaoCor(i.tipo)} ps-3 mb-3 position-relative">
+                <button class="btn btn-sm btn-outline-danger position-absolute" style="top: 0; right: 0;" onclick="moduloCRM.excluirInteracaoOrcamento('${i.id}')" title="Excluir">
+                    <i class="bi bi-trash"></i>
+                </button>
+                <div class="mb-1">
+                    <strong class="text-${this.getTipoInteracaoCor(i.tipo)}">${databaseCRM.getTipoInteracaoOrcamentoLabel(i.tipo)}</strong>
+                    <small class="text-muted ms-2">${this.formatarDataHora(i.data)}</small>
+                </div>
+                <p class="mb-2">${i.descricao || '-'}</p>
+                ${i.status_negociacao ? `
+                    <span class="badge bg-${databaseCRM.getStatusNegociacaoCor(i.status_negociacao)}">${databaseCRM.getStatusNegociacaoLabel(i.status_negociacao)}</span>
+                ` : ''}
+                ${i.proximo_contato_em ? `
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar-event me-1"></i>Agendado: ${this.formatarDataHora(i.proximo_contato_em)}
+                        </small>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+    }
+
+    getTipoInteracaoCor(tipo) {
+        const cores = {
+            'whatsapp': 'success',
+            'ligacao': 'primary',
+            'visita': 'warning',
+            'email': 'info',
+            'outro': 'secondary'
+        };
+        return cores[tipo] || 'secondary';
+    }
+
+    async carregarAnexosOrcamento(orcamentoId) {
+        const resultado = await databaseCRM.carregarAnexosOrcamento(orcamentoId);
+        const anexos = resultado.data || [];
+        
+        document.getElementById('contadorAnexosOrc').textContent = anexos.length;
+        
+        const container = document.getElementById('listaAnexosOrcamento');
+        if (anexos.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center mb-0">Nenhum anexo</p>';
+            return;
+        }
+
+        container.innerHTML = anexos.map(a => `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                <div class="d-flex align-items-center">
+                    <i class="bi ${databaseCRM.getTipoArquivoIcon(a.tipo_arquivo)} fs-4 me-2"></i>
+                    <div>
+                        <span class="d-block">${a.nome_arquivo}</span>
+                        <small class="text-muted">${this.formatarTamanhoArquivo(a.tamanho_bytes)} • ${this.formatarData(a.data_upload)}</small>
+                    </div>
+                </div>
+                <div>
+                    <a href="${a.url_arquivo}" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="Abrir">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="moduloCRM.excluirAnexoOrcamento('${a.id}', '${a.url_arquivo}')" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    formatarTamanhoArquivo(bytes) {
+        if (!bytes) return '-';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // Interações do Orçamento
+    novaInteracaoOrcamento() {
+        if (!this.orcamentoAtual) return;
+
+        document.getElementById('formInteracaoOrcamento').reset();
+        document.getElementById('interacaoOrcamentoId').value = '';
+        document.getElementById('interacaoOrcamentoOrcamentoId').value = this.orcamentoAtual.id;
+        
+        // Data atual
+        const agora = new Date();
+        const dataLocal = agora.toISOString().slice(0, 16);
+        document.getElementById('interacaoOrcamentoData').value = dataLocal;
+
+        document.getElementById('modalInteracaoOrcamentoTitulo').textContent = 'Nova Interação';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalInteracaoOrcamento'));
+        modal.show();
+    }
+
+    async salvarInteracaoOrcamento() {
+        if (this.salvandoInteracaoOrc) return;
+        this.salvandoInteracaoOrc = true;
+
+        const id = document.getElementById('interacaoOrcamentoId').value;
+        const orcamentoId = document.getElementById('interacaoOrcamentoOrcamentoId').value;
+
+        const proximoContatoInput = document.getElementById('interacaoOrcamentoProximoContato').value;
+        
+        const interacao = {
+            orcamento_id: orcamentoId,
+            data: document.getElementById('interacaoOrcamentoData').value,
+            tipo: document.getElementById('interacaoOrcamentoTipo').value,
+            status_negociacao: document.getElementById('interacaoOrcamentoStatus').value || null,
+            descricao: document.getElementById('interacaoOrcamentoDescricao').value.trim(),
+            proximo_contato_em: proximoContatoInput || null
+        };
+
+        let resultado;
+        if (id) {
+            resultado = await databaseCRM.atualizarInteracaoOrcamento(id, interacao);
+        } else {
+            resultado = await databaseCRM.salvarInteracaoOrcamento(interacao);
+        }
+
+        if (resultado.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalInteracaoOrcamento')).hide();
+            await this.carregarInteracoesOrcamento(orcamentoId);
+            
+            // Atualizar status do orçamento se informado
+            if (interacao.status_negociacao) {
+                await databaseCRM.atualizarOrcamento(orcamentoId, { status: interacao.status_negociacao });
+                const statusEl = document.getElementById('detalheOrcamentoStatus');
+                statusEl.textContent = databaseCRM.getStatusNegociacaoLabel(interacao.status_negociacao);
+                statusEl.className = `badge bg-${databaseCRM.getStatusNegociacaoCor(interacao.status_negociacao)}`;
+            }
+            
+            this.mostrarAlerta(id ? 'Interação atualizada!' : 'Interação registrada!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+
+        this.salvandoInteracaoOrc = false;
+    }
+
+    async editarInteracaoOrcamento(id) {
+        const resultado = await databaseCRM.carregarInteracoesOrcamento(this.orcamentoAtual.id);
+        const interacao = resultado.data?.find(i => i.id === id);
+        
+        if (!interacao) {
+            this.mostrarAlerta('Interação não encontrada', 'danger');
+            return;
+        }
+
+        document.getElementById('interacaoOrcamentoId').value = interacao.id;
+        document.getElementById('interacaoOrcamentoOrcamentoId').value = interacao.orcamento_id;
+        document.getElementById('interacaoOrcamentoData').value = interacao.data ? interacao.data.slice(0, 16) : '';
+        document.getElementById('interacaoOrcamentoTipo').value = interacao.tipo;
+        document.getElementById('interacaoOrcamentoStatus').value = interacao.status_negociacao || '';
+        document.getElementById('interacaoOrcamentoDescricao').value = interacao.descricao || '';
+        document.getElementById('interacaoOrcamentoProximoContato').value = interacao.proximo_contato_em ? interacao.proximo_contato_em.slice(0, 16) : '';
+
+        document.getElementById('modalInteracaoOrcamentoTitulo').textContent = 'Editar Interação';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalInteracaoOrcamento'));
+        modal.show();
+    }
+
+    async excluirInteracaoOrcamento(id) {
+        if (!confirm('Excluir esta interação?')) return;
+
+        const resultado = await databaseCRM.excluirInteracaoOrcamento(id);
+        
+        if (resultado.success) {
+            await this.carregarInteracoesOrcamento(this.orcamentoAtual.id);
+            this.mostrarAlerta('Interação excluída!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+    }
+
+    // Anexos do Orçamento
+    async uploadAnexoOrcamento(arquivo) {
+        if (!arquivo || !this.orcamentoAtual) return;
+
+        this.mostrarAlerta('Enviando arquivo...', 'info');
+
+        const resultado = await databaseCRM.uploadAnexoOrcamento(this.orcamentoAtual.id, arquivo);
+        
+        if (resultado.success) {
+            await this.carregarAnexosOrcamento(this.orcamentoAtual.id);
+            this.mostrarAlerta('Arquivo anexado!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
+
+        // Limpar input
+        document.getElementById('inputAnexoOrcamento').value = '';
+    }
+
+    async excluirAnexoOrcamento(id, urlArquivo) {
+        if (!confirm('Excluir este anexo?')) return;
+
+        const resultado = await databaseCRM.excluirAnexoOrcamento(id, urlArquivo);
+        
+        if (resultado.success) {
+            await this.carregarAnexosOrcamento(this.orcamentoAtual.id);
+            this.mostrarAlerta('Anexo excluído!', 'success');
+        } else {
+            this.mostrarAlerta('Erro: ' + resultado.error, 'danger');
+        }
     }
 
     // ============================================

@@ -173,12 +173,15 @@
                 <div id="secaoDashboard" class="page-section active">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Comercial</h4>
-                        <select class="form-select" style="width: 150px;" id="filtroDashboard">
-                            <option value="hoje">Hoje</option>
-                            <option value="7dias">7 dias</option>
-                            <option value="30dias" selected>30 dias</option>
-                            <option value="mes">Mês atual</option>
-                        </select>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control" id="buscaPlaca" placeholder="Buscar placa..." style="width: 180px; text-transform: uppercase;" onkeyup="moduloCRM.buscarPorPlaca(this.value)">
+                            <select class="form-select" style="width: 150px;" id="filtroDashboard">
+                                <option value="hoje">Hoje</option>
+                                <option value="7dias">7 dias</option>
+                                <option value="30dias" selected>30 dias</option>
+                                <option value="mes">Mês atual</option>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Cards -->
@@ -292,13 +295,12 @@
                                 <div class="col-md-3">
                                     <select class="form-select" id="filtroClassificacao">
                                         <option value="">Todas classificações</option>
-                                        <option value="vip">VIP</option>
-                                        <option value="normal">Normal</option>
-                                        <option value="risco">Risco</option>
+                                        <option value="autonomo">Autônomo</option>
+                                        <option value="empresa">Empresa</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
-                                    <button class="btn btn-outline-secondary w-100" disabled title="Integração futura">
+                                    <button class="btn btn-outline-primary w-100" onclick="moduloCRM.exportarSelecionadosBling()">
                                         <i class="bi bi-cloud-upload me-1"></i>Exportar Bling
                                     </button>
                                 </div>
@@ -313,9 +315,10 @@
                                 <table class="table table-hover table-crm mb-0">
                                     <thead>
                                         <tr>
+                                            <th><input type="checkbox" id="selecionarTodosClientes" onclick="moduloCRM.selecionarTodosClientes(this.checked)" title="Selecionar todos"></th>
                                             <th>Nome/Razão Social</th>
                                             <th>CPF/CNPJ</th>
-                                            <th>Telefone</th>
+                                            <th>WhatsApp</th>
                                             <th>Cidade</th>
                                             <th>Classificação</th>
                                             <th>Ações</th>
@@ -462,12 +465,12 @@
                                 <input type="email" class="form-control" id="clienteEmailFinanceiro">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Telefone *</label>
-                                <input type="text" class="form-control" id="clienteTelefone" required>
+                                <label class="form-label">WhatsApp *</label>
+                                <input type="text" class="form-control" id="clienteWhatsapp" required placeholder="(00) 00000-0000">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">WhatsApp</label>
-                                <input type="text" class="form-control" id="clienteWhatsapp">
+                                <label class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="clienteTelefone">
                             </div>
                         </div>
 
@@ -620,8 +623,8 @@
                                 <input type="date" class="form-control" id="caminhaoUltimoServico">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Ciclo (meses)</label>
-                                <input type="number" class="form-control" id="caminhaoCicloMeses" value="12">
+                                <label class="form-label">Nome do Motorista</label>
+                                <input type="text" class="form-control" id="caminhaoMotorista" placeholder="Nome do motorista">
                             </div>
                         </div>
                     </div>
@@ -687,27 +690,16 @@
                     </div>
 
                     <div class="row">
-                        <!-- Interações -->
-                        <div class="col-md-6">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Interações</h6>
-                                <button class="btn btn-sm btn-outline-primary" onclick="moduloCRM.novaInteracao()">
-                                    <i class="bi bi-plus-lg"></i>
-                                </button>
-                            </div>
-                            <div id="listaInteracoes" style="max-height: 250px; overflow-y: auto;">
-                            </div>
-                        </div>
-
                         <!-- Orçamentos -->
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>Orçamentos</h6>
                                 <button class="btn btn-sm btn-outline-primary" onclick="moduloCRM.novoOrcamento()">
                                     <i class="bi bi-plus-lg"></i>
                                 </button>
                             </div>
-                            <div id="listaOrcamentosCaminhao" style="max-height: 250px; overflow-y: auto;">
+                            <small class="text-muted d-block mb-2">Clique no orçamento para ver interações e anexos</small>
+                            <div id="listaOrcamentosCaminhao" style="max-height: 300px; overflow-y: auto;">
                             </div>
                         </div>
                     </div>
@@ -785,6 +777,13 @@
                         <input type="hidden" id="orcamentoCaminhaoId">
                         
                         <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="orcamentoTipo">
+                                    <option value="proposta">Proposta</option>
+                                    <option value="pedido_venda">Pedido de Venda</option>
+                                </select>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label">Descrição</label>
                                 <textarea class="form-control" id="orcamentoDescricao" rows="2"></textarea>
@@ -828,6 +827,165 @@
                                 <label class="form-label">N° Pedido (manual)</label>
                                 <input type="text" class="form-control" id="orcamentoNumeroPedido" placeholder="Preencher após aprovação">
                             </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalhe Orçamento -->
+    <div class="modal fade" id="modalDetalheOrcamento" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-text me-2"></i>
+                        Orçamento <span id="detalheOrcamentoNumero">#-</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Dados do Orçamento -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Dados do Orçamento</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <small class="text-muted">Cliente</small>
+                                    <p class="mb-0 fw-bold" id="detalheOrcamentoCliente">-</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Tipo</small>
+                                    <p class="mb-0" id="detalheOrcamentoTipo">-</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Valor</small>
+                                    <p class="mb-0 fw-bold text-success" id="detalheOrcamentoValor">R$ 0,00</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted">Status</small>
+                                    <p class="mb-0"><span class="badge" id="detalheOrcamentoStatus">-</span></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Data</small>
+                                    <p class="mb-0" id="detalheOrcamentoData">-</p>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <small class="text-muted">Descrição</small>
+                                    <p class="mb-0" id="detalheOrcamentoDescricao">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Interações -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-chat-dots me-2"></i>Interações 
+                                        <span class="badge bg-primary" id="contadorInteracoesOrc">0</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-primary" onclick="moduloCRM.novaInteracaoOrcamento()">
+                                        <i class="bi bi-plus"></i> Nova
+                                    </button>
+                                </div>
+                                <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+                                    <div id="listaInteracoesOrcamento" class="p-3">
+                                        <p class="text-muted text-center mb-0">Nenhuma interação</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Anexos -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-paperclip me-2"></i>Anexos 
+                                        <span class="badge bg-secondary" id="contadorAnexosOrc">0</span>
+                                    </h6>
+                                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('inputAnexoOrcamento').click()">
+                                        <i class="bi bi-upload"></i> Anexar
+                                    </button>
+                                    <input type="file" id="inputAnexoOrcamento" style="display: none;" onchange="moduloCRM.uploadAnexoOrcamento(this.files[0])">
+                                </div>
+                                <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
+                                    <div id="listaAnexosOrcamento" class="p-3">
+                                        <p class="text-muted text-center mb-0">Nenhum anexo</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="moduloCRM.editarOrcamento(moduloCRM.orcamentoAtual?.id)">
+                        <i class="bi bi-pencil me-1"></i>Editar
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Interação do Orçamento -->
+    <div class="modal fade" id="modalInteracaoOrcamento" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalInteracaoOrcamentoTitulo">Nova Interação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formInteracaoOrcamento">
+                    <div class="modal-body">
+                        <input type="hidden" id="interacaoOrcamentoId">
+                        <input type="hidden" id="interacaoOrcamentoOrcamentoId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Data *</label>
+                            <input type="datetime-local" class="form-control" id="interacaoOrcamentoData" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipo *</label>
+                            <select class="form-select" id="interacaoOrcamentoTipo" required>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="ligacao">Ligação</option>
+                                <option value="visita">Visita</option>
+                                <option value="email">E-mail</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status da Negociação</label>
+                            <select class="form-select" id="interacaoOrcamentoStatus">
+                                <option value="">Sem alteração</option>
+                                <option value="rascunho">Rascunho</option>
+                                <option value="enviado">Enviado</option>
+                                <option value="negociando">Negociando</option>
+                                <option value="fechado">Fechado</option>
+                                <option value="perdido">Perdido</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrição *</label>
+                            <textarea class="form-control" id="interacaoOrcamentoDescricao" rows="3" required placeholder="Descreva o que foi tratado..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-calendar-event me-1"></i>Agendar Próximo Contato</label>
+                            <input type="datetime-local" class="form-control" id="interacaoOrcamentoProximoContato">
+                            <small class="text-muted">Opcional - deixe em branco se não precisar agendar</small>
                         </div>
                     </div>
                     <div class="modal-footer">
