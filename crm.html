@@ -1159,9 +1159,15 @@
             salvarPreferencias({ modal_aberto: tipo, modal_id: id });
         };
         
-        // Limpar modal ao fechar
-        document.addEventListener('hidden.bs.modal', function() {
+        // Limpar modal ao fechar e remover backdrop
+        document.addEventListener('hidden.bs.modal', function(e) {
             salvarPreferencias({ modal_aberto: null, modal_id: null });
+            
+            // Remover backdrop e classe do body
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
         });
 
         // Autenticação
