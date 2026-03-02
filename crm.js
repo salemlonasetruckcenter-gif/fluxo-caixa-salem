@@ -368,6 +368,8 @@ class ModuloCRM {
         document.getElementById('clienteCpfCnpj').value = cliente.cpf_cnpj || '';
         document.getElementById('clienteIe').value = cliente.ie || '';
         document.getElementById('clienteIm').value = cliente.im || '';
+        document.getElementById('clienteResponsavel').value = cliente.responsavel || '';
+        document.getElementById('clienteDataNascimento').value = cliente.data_nascimento || '';
         document.getElementById('clienteEmail').value = cliente.email || '';
         document.getElementById('clienteEmailFinanceiro').value = cliente.email_financeiro || '';
         document.getElementById('clienteTelefone').value = cliente.telefone || '';
@@ -402,6 +404,8 @@ class ModuloCRM {
             cpf_cnpj: document.getElementById('clienteCpfCnpj').value.trim() || null,
             ie: document.getElementById('clienteIe').value.trim() || null,
             im: document.getElementById('clienteIm').value.trim() || null,
+            responsavel: document.getElementById('clienteResponsavel').value.trim() || null,
+            data_nascimento: document.getElementById('clienteDataNascimento').value || null,
             email: document.getElementById('clienteEmail').value.trim() || null,
             email_financeiro: document.getElementById('clienteEmailFinanceiro').value.trim() || null,
             telefone: document.getElementById('clienteTelefone').value.trim() || null,
@@ -454,6 +458,9 @@ class ModuloCRM {
         
         // Renderizar detalhes
         this.renderizarDetalheCliente(resultado.data, caminhoes.data || []);
+        
+        // Salvar modal aberto para restaurar após atualização
+        if (window.salvarModalAberto) window.salvarModalAberto('cliente', id);
         
         // Mostrar modal
         const modal = new bootstrap.Modal(document.getElementById('modalDetalheCliente'));
@@ -605,6 +612,9 @@ class ModuloCRM {
         const orcamentos = await databaseCRM.carregarOrcamentos({ caminhaoId: id });
 
         this.renderizarDetalheCaminhao(caminhao, interacoes.data || [], orcamentos.data || []);
+
+        // Salvar modal aberto para restaurar após atualização
+        if (window.salvarModalAberto) window.salvarModalAberto('caminhao', id);
 
         const modal = new bootstrap.Modal(document.getElementById('modalDetalheCaminhao'));
         modal.show();
@@ -1101,6 +1111,9 @@ class ModuloCRM {
         await this.carregarInteracoesOrcamento(id);
         await this.carregarAnexosOrcamento(id);
 
+        // Salvar modal aberto para restaurar após atualização
+        if (window.salvarModalAberto) window.salvarModalAberto('orcamento', id);
+
         // Abrir modal
         const modal = new bootstrap.Modal(document.getElementById('modalDetalheOrcamento'));
         modal.show();
@@ -1169,33 +1182,35 @@ class ModuloCRM {
         const resultado = await databaseCRM.carregarAnexosOrcamento(orcamentoId);
         const anexos = resultado.data || [];
         
-        document.getElementById('contadorAnexosOrc').textContent = anexos.length;
-        
         const container = document.getElementById('listaAnexosOrcamento');
         if (anexos.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center mb-0">Nenhum anexo</p>';
+            container.style.display = 'none';
             return;
         }
 
-        container.innerHTML = anexos.map(a => `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                <div class="d-flex align-items-center">
-                    <i class="bi ${databaseCRM.getTipoArquivoIcon(a.tipo_arquivo)} fs-4 me-2"></i>
+        container.style.display = 'block';
+        container.innerHTML = `
+            <h6 class="mb-2"><i class="bi bi-paperclip me-1"></i>Anexos (${anexos.length})</h6>
+            ${anexos.map(a => `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                    <div class="d-flex align-items-center">
+                        <i class="bi ${databaseCRM.getTipoArquivoIcon(a.tipo_arquivo)} fs-4 me-2"></i>
+                        <div>
+                            <span class="d-block">${a.nome_arquivo}</span>
+                            <small class="text-muted">${this.formatarTamanhoArquivo(a.tamanho_bytes)} • ${this.formatarData(a.data_upload)}</small>
+                        </div>
+                    </div>
                     <div>
-                        <span class="d-block">${a.nome_arquivo}</span>
-                        <small class="text-muted">${this.formatarTamanhoArquivo(a.tamanho_bytes)} • ${this.formatarData(a.data_upload)}</small>
+                        <a href="${a.url_arquivo}" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="Abrir">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" onclick="moduloCRM.excluirAnexoOrcamento('${a.id}', '${a.url_arquivo}')" title="Excluir">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <a href="${a.url_arquivo}" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="Abrir">
-                        <i class="bi bi-download"></i>
-                    </a>
-                    <button class="btn btn-sm btn-outline-danger" onclick="moduloCRM.excluirAnexoOrcamento('${a.id}', '${a.url_arquivo}')" title="Excluir">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+            `).join('')}
+        `;
     }
 
     formatarTamanhoArquivo(bytes) {

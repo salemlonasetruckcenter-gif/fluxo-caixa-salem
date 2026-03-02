@@ -57,6 +57,100 @@ class FluxoCaixa {
         if (typeof moduloSaidas !== 'undefined') {
             await moduloSaidas.inicializarComSupabase(this.usuarioId);
         }
+        
+        // Restaurar preferências do Supabase
+        await this.restaurarPreferenciasSupabase();
+    }
+    
+    // Salvar preferências no Supabase
+    async salvarPreferenciasSupabase(dados) {
+        if (!this.usuarioId || typeof supabase === 'undefined') return;
+        
+        try {
+            // Carregar preferências atuais
+            const { data: atual } = await supabase
+                .from('preferencias_usuario')
+                .select('filtros')
+                .eq('user_id', this.usuarioId)
+                .single();
+            
+            const filtrosAtuais = atual?.filtros || {};
+            const novosFiltros = { ...filtrosAtuais, ...dados };
+            
+            await supabase
+                .from('preferencias_usuario')
+                .upsert({
+                    user_id: this.usuarioId,
+                    filtros: novosFiltros,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+        } catch (e) {
+            console.warn('Erro ao salvar preferências:', e);
+        }
+    }
+    
+    // Carregar preferências do Supabase
+    async carregarPreferenciasSupabase() {
+        if (!this.usuarioId || typeof supabase === 'undefined') return null;
+        
+        try {
+            const { data } = await supabase
+                .from('preferencias_usuario')
+                .select('*')
+                .eq('user_id', this.usuarioId)
+                .single();
+            
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    // Restaurar preferências do Supabase
+    async restaurarPreferenciasSupabase() {
+        const prefs = await this.carregarPreferenciasSupabase();
+        if (!prefs) return;
+        
+        // Restaurar aba ativa
+        if (prefs.aba_ativa) {
+            const tabElement = document.getElementById(prefs.aba_ativa);
+            if (tabElement) {
+                const tab = new bootstrap.Tab(tabElement);
+                tab.show();
+            }
+        }
+        
+        // Restaurar filtros de datas
+        if (prefs.filtros) {
+            const camposData = [
+                'dataInicioVendas', 'dataFimVendas',
+                'dataInicioSaidas', 'dataFimSaidas',
+                'dataInicioFluxo', 'dataFimFluxo',
+                'dataInicioRelatorio', 'dataFimRelatorio'
+            ];
+            
+            camposData.forEach(id => {
+                if (prefs.filtros[id]) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = prefs.filtros[id];
+                }
+            });
+            
+            // Aplicar filtros se houver datas completas
+            const dataInicioVendas = document.getElementById('dataInicioVendas')?.value;
+            const dataFimVendas = document.getElementById('dataFimVendas')?.value;
+            if (dataInicioVendas && dataFimVendas) {
+                this.carregarVendasFiltradas(dataInicioVendas, dataFimVendas);
+                this.atualizarResumoPorPeriodo(dataInicioVendas, dataFimVendas);
+            }
+            
+            const dataInicioSaidas = document.getElementById('dataInicioSaidas')?.value;
+            const dataFimSaidas = document.getElementById('dataFimSaidas')?.value;
+            if (dataInicioSaidas && dataFimSaidas && typeof moduloSaidas !== 'undefined') {
+                moduloSaidas.carregarSaidasFiltradas(dataInicioSaidas, dataFimSaidas);
+                moduloSaidas.atualizarResumoSaidas(dataInicioSaidas, dataFimSaidas);
+            }
+        }
     }
 
     inicializarModoLocal() {
@@ -278,8 +372,8 @@ class FluxoCaixa {
         // Abas
         document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
             tab.addEventListener('shown.bs.tab', (e) => {
-                // Salvar aba ativa
-                localStorage.setItem('abaAtiva', e.target.id);
+                // Salvar aba ativa no Supabase
+                this.salvarPreferenciasSupabase({ aba_ativa: e.target.id });
                 
                 if (e.target.id === 'fluxo-tab') {
                     // Verificar se há datas selecionadas e usar
@@ -303,21 +397,10 @@ class FluxoCaixa {
             });
         });
         
-        // Restaurar datas dos filtros ANTES de mostrar a aba
-        this.restaurarDatasFiltros();
-        
-        // Restaurar aba ativa ao carregar
-        const abaAtiva = localStorage.getItem('abaAtiva');
-        if (abaAtiva) {
-            const tabElement = document.getElementById(abaAtiva);
-            if (tabElement) {
-                const tab = new bootstrap.Tab(tabElement);
-                tab.show();
-            }
-        }
+        // Preferências são restauradas em restaurarPreferenciasSupabase() após login
     }
     
-    // Salvar datas dos filtros no localStorage
+    // Salvar datas dos filtros no Supabase
     salvarDatasFiltros(prefixo) {
         const campos = {
             'vendas': ['dataInicioVendas', 'dataFimVendas'],
@@ -327,54 +410,15 @@ class FluxoCaixa {
         };
         
         if (campos[prefixo]) {
+            const filtros = {};
             campos[prefixo].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.value) {
-                    localStorage.setItem('filtro_' + id, el.value);
+                    filtros[id] = el.value;
                 }
             });
+            this.salvarPreferenciasSupabase(filtros);
         }
-    }
-    
-    // Restaurar datas dos filtros do localStorage e aplicar filtros se necessário
-    restaurarDatasFiltros() {
-        const camposData = [
-            'dataInicioVendas', 'dataFimVendas',
-            'dataInicioSaidas', 'dataFimSaidas',
-            'dataInicioFluxo', 'dataFimFluxo',
-            'dataInicioRelatorio', 'dataFimRelatorio'
-        ];
-        
-        // Primeiro, preencher todos os campos
-        camposData.forEach(id => {
-            const valorSalvo = localStorage.getItem('filtro_' + id);
-            if (valorSalvo) {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.value = valorSalvo;
-                }
-            }
-        });
-        
-        // Depois, aplicar filtros se houver datas completas
-        // Vendas
-        const dataInicioVendas = document.getElementById('dataInicioVendas')?.value;
-        const dataFimVendas = document.getElementById('dataFimVendas')?.value;
-        if (dataInicioVendas && dataFimVendas) {
-            this.carregarVendasFiltradas(dataInicioVendas, dataFimVendas);
-            this.atualizarResumoPorPeriodo(dataInicioVendas, dataFimVendas);
-        }
-        
-        // Saídas
-        const dataInicioSaidas = document.getElementById('dataInicioSaidas')?.value;
-        const dataFimSaidas = document.getElementById('dataFimSaidas')?.value;
-        if (dataInicioSaidas && dataFimSaidas && typeof moduloSaidas !== 'undefined') {
-            moduloSaidas.carregarSaidasFiltradas(dataInicioSaidas, dataFimSaidas);
-            moduloSaidas.atualizarResumoSaidas(dataInicioSaidas, dataFimSaidas);
-        }
-        
-        // Fluxo de Caixa - será aplicado quando a aba for mostrada
-        // Relatório - será aplicado quando a aba for mostrada
     }
     
     // Limpar datas salvas de um filtro específico
@@ -387,9 +431,11 @@ class FluxoCaixa {
         };
         
         if (campos[prefixo]) {
+            const filtros = {};
             campos[prefixo].forEach(id => {
-                localStorage.removeItem('filtro_' + id);
+                filtros[id] = null;
             });
+            this.salvarPreferenciasSupabase(filtros);
         }
     }
 
@@ -2686,7 +2732,7 @@ class FluxoCaixa {
         this.mostrarAlerta('Backup local restaurado com sucesso!', 'success');
     }
 
-    limparTodosDados() {
+    async limparTodosDados() {
         const senha = prompt('Digite a senha para autorizar a exclusão de todos os dados:\n\n(Clique em Cancelar e digite "ESQUECI" para redefinir a senha)');
         
         // Opção de redefinir senha
@@ -2695,9 +2741,9 @@ class FluxoCaixa {
             return;
         }
         
-        // Verificar senha (personalizada ou padrão)
-        const senhaPersonalizada = localStorage.getItem('senhaLimpezaDados');
-        const senhaCorreta = senhaPersonalizada || 'S@LEM2026';
+        // Verificar senha (personalizada do Supabase ou padrão)
+        const prefs = await this.carregarPreferenciasSupabase();
+        const senhaCorreta = prefs?.senha_limpeza || 'S@LEM2026';
         
         if (senha !== senhaCorreta) {
             this.mostrarAlerta('Senha incorreta! Operação cancelada.', 'danger');
@@ -2721,13 +2767,15 @@ class FluxoCaixa {
         this.mostrarAlerta('Todos os dados foram limpos!', 'info');
     }
     
-    redefinirSenhaLimpeza() {
+    async redefinirSenhaLimpeza() {
         // Gerar código de recuperação aleatório
         const codigoRecuperacao = Math.random().toString(36).substring(2, 8).toUpperCase();
         
-        // Salvar código temporariamente
-        localStorage.setItem('codigoRecuperacaoSenha', codigoRecuperacao);
-        localStorage.setItem('codigoRecuperacaoExpira', Date.now() + (30 * 60 * 1000)); // 30 minutos
+        // Salvar código temporariamente no Supabase
+        await this.salvarPreferenciasSupabase({
+            codigo_recuperacao: codigoRecuperacao,
+            codigo_expira: Date.now() + (30 * 60 * 1000) // 30 minutos
+        });
         
         // Abrir cliente de email com o código
         const email = 'jonasfelipe.lima@gmail.com';
@@ -2739,7 +2787,7 @@ class FluxoCaixa {
         this.mostrarAlerta('Um email será aberto com o código de recuperação. Envie o email para receber o código.', 'info', 10000);
         
         // Aguardar usuário inserir o código
-        setTimeout(() => {
+        setTimeout(async () => {
             const codigoDigitado = prompt('Digite o código de recuperação que foi enviado por email:');
             
             if (!codigoDigitado) {
@@ -2747,13 +2795,13 @@ class FluxoCaixa {
                 return;
             }
             
-            const codigoSalvo = localStorage.getItem('codigoRecuperacaoSenha');
-            const expira = parseInt(localStorage.getItem('codigoRecuperacaoExpira'));
+            const prefs = await this.carregarPreferenciasSupabase();
+            const codigoSalvo = prefs?.filtros?.codigo_recuperacao;
+            const expira = prefs?.filtros?.codigo_expira;
             
             if (Date.now() > expira) {
                 this.mostrarAlerta('Código expirado! Tente novamente.', 'danger');
-                localStorage.removeItem('codigoRecuperacaoSenha');
-                localStorage.removeItem('codigoRecuperacaoExpira');
+                await this.salvarPreferenciasSupabase({ codigo_recuperacao: null, codigo_expira: null });
                 return;
             }
             
@@ -2762,14 +2810,13 @@ class FluxoCaixa {
                 const novaSenha = prompt('Código válido! Digite a nova senha para limpeza de dados:');
                 
                 if (novaSenha && novaSenha.length >= 4) {
-                    localStorage.setItem('senhaLimpezaDados', novaSenha);
+                    await this.salvarPreferenciasSupabase({ senha_limpeza: novaSenha });
                     this.mostrarAlerta(`Nova senha definida com sucesso! Sua nova senha é: ${novaSenha}`, 'success', 10000);
                 } else {
                     this.mostrarAlerta('Senha deve ter pelo menos 4 caracteres.', 'danger');
                 }
                 
-                localStorage.removeItem('codigoRecuperacaoSenha');
-                localStorage.removeItem('codigoRecuperacaoExpira');
+                await this.salvarPreferenciasSupabase({ codigo_recuperacao: null, codigo_expira: null });
             } else {
                 this.mostrarAlerta('Código incorreto!', 'danger');
             }

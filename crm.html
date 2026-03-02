@@ -71,9 +71,9 @@
         }
     </style>
 </head>
-<body>
-    <!-- Tela de Login -->
-    <div id="telaLogin" class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+<body style="visibility: hidden;">
+    <!-- Tela de Login (escondida inicialmente) -->
+    <div id="telaLogin" class="d-flex align-items-center justify-content-center min-vh-100 bg-light d-none">
         <div class="card shadow-lg" style="width: 400px;">
             <div class="card-body p-5">
                 <h3 class="text-center mb-4">
@@ -170,7 +170,7 @@
                 <div id="alertContainer"></div>
 
                 <!-- Dashboard -->
-                <div id="secaoDashboard" class="page-section active">
+                <div id="secaoDashboard" class="page-section">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Comercial</h4>
                         <div class="d-flex gap-2">
@@ -450,6 +450,14 @@
                             <div class="col-md-4">
                                 <label class="form-label">IM</label>
                                 <input type="text" class="form-control" id="clienteIm">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Responsável</label>
+                                <input type="text" class="form-control" id="clienteResponsavel" placeholder="Nome do responsável">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Data de Nascimento</label>
+                                <input type="date" class="form-control" id="clienteDataNascimento">
                             </div>
                         </div>
 
@@ -889,41 +897,28 @@
 
                     <div class="row">
                         <!-- Interações -->
-                        <div class="col-md-6">
-                            <div class="card h-100">
+                        <div class="col-12">
+                            <div class="card">
                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">
                                         <i class="bi bi-chat-dots me-2"></i>Interações 
                                         <span class="badge bg-primary" id="contadorInteracoesOrc">0</span>
                                     </h6>
-                                    <button class="btn btn-sm btn-primary" onclick="moduloCRM.novaInteracaoOrcamento()">
-                                        <i class="bi bi-plus"></i> Nova
-                                    </button>
-                                </div>
-                                <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
-                                    <div id="listaInteracoesOrcamento" class="p-3">
-                                        <p class="text-muted text-center mb-0">Nenhuma interação</p>
+                                    <div>
+                                        <button class="btn btn-sm btn-secondary me-2" onclick="document.getElementById('inputAnexoOrcamento').click()" title="Anexar arquivo">
+                                            <i class="bi bi-paperclip"></i>
+                                        </button>
+                                        <input type="file" id="inputAnexoOrcamento" style="display: none;" onchange="moduloCRM.uploadAnexoOrcamento(this.files[0])">
+                                        <button class="btn btn-sm btn-primary" onclick="moduloCRM.novaInteracaoOrcamento()">
+                                            <i class="bi bi-plus"></i> Nova
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Anexos -->
-                        <div class="col-md-6">
-                            <div class="card h-100">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">
-                                        <i class="bi bi-paperclip me-2"></i>Anexos 
-                                        <span class="badge bg-secondary" id="contadorAnexosOrc">0</span>
-                                    </h6>
-                                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('inputAnexoOrcamento').click()">
-                                        <i class="bi bi-upload"></i> Anexar
-                                    </button>
-                                    <input type="file" id="inputAnexoOrcamento" style="display: none;" onchange="moduloCRM.uploadAnexoOrcamento(this.files[0])">
-                                </div>
-                                <div class="card-body p-0" style="max-height: 350px; overflow-y: auto;">
-                                    <div id="listaAnexosOrcamento" class="p-3">
-                                        <p class="text-muted text-center mb-0">Nenhum anexo</p>
+                                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                                    <div id="listaInteracoesOrcamento" class="p-3">
+                                        <p class="text-muted text-center mb-0">Nenhuma interação registrada</p>
+                                    </div>
+                                    <div id="listaAnexosOrcamento" class="p-3 border-top" style="display: none;">
                                     </div>
                                 </div>
                             </div>
@@ -971,9 +966,9 @@
                             <label class="form-label">Status da Negociação</label>
                             <select class="form-select" id="interacaoOrcamentoStatus">
                                 <option value="">Sem alteração</option>
-                                <option value="rascunho">Rascunho</option>
-                                <option value="enviado">Enviado</option>
+                                <option value="orcamento_enviado">Orçamento Enviado</option>
                                 <option value="negociando">Negociando</option>
+                                <option value="gelado">Gelado</option>
                                 <option value="fechado">Fechado</option>
                                 <option value="perdido">Perdido</option>
                             </select>
@@ -1004,8 +999,71 @@
     <script src="database-crm.js"></script>
     <script src="crm.js"></script>
     <script>
+        // Preferências do usuário (salvas no Supabase)
+        let preferenciasCache = null;
+        
+        async function salvarPreferencias(dados) {
+            if (!moduloCRM.usuarioId) return;
+            
+            try {
+                // Primeiro, verificar se já existe registro
+                const { data: existente } = await supabase
+                    .from('preferencias_usuario')
+                    .select('id')
+                    .eq('user_id', moduloCRM.usuarioId)
+                    .single();
+                
+                if (existente) {
+                    // Atualizar registro existente
+                    await supabase
+                        .from('preferencias_usuario')
+                        .update({
+                            ...dados,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', moduloCRM.usuarioId);
+                } else {
+                    // Criar novo registro
+                    await supabase
+                        .from('preferencias_usuario')
+                        .insert({
+                            user_id: moduloCRM.usuarioId,
+                            ...dados,
+                            updated_at: new Date().toISOString()
+                        });
+                }
+                
+                // Atualizar cache
+                preferenciasCache = { ...preferenciasCache, ...dados };
+            } catch (e) {
+                console.error('Erro ao salvar preferências:', e);
+            }
+        }
+        
+        async function carregarPreferencias() {
+            if (!moduloCRM.usuarioId) return null;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('preferencias_usuario')
+                    .select('*')
+                    .eq('user_id', moduloCRM.usuarioId)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Erro ao carregar preferências:', error);
+                }
+                
+                preferenciasCache = data;
+                return data;
+            } catch (e) {
+                console.error('Erro ao carregar preferências:', e);
+                return null;
+            }
+        }
+
         // Navegação
-        function navegarPara(secao) {
+        function navegarPara(secao, atualizarMenu = true) {
             // Esconder todas as seções
             document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
             
@@ -1013,8 +1071,20 @@
             document.getElementById('secao' + secao.charAt(0).toUpperCase() + secao.slice(1)).classList.add('active');
             
             // Atualizar menu
-            document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
-            event.target.classList.add('active');
+            if (atualizarMenu) {
+                document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                    const linkText = link.textContent.toLowerCase();
+                    const secaoNome = secao.replace('orcamentos', 'orçamentos');
+                    if (linkText.includes(secaoNome)) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Salvar seção atual no Supabase
+            salvarPreferencias({ secao_atual: secao, modal_aberto: null, modal_id: null });
             
             // Carregar dados da seção
             switch(secao) {
@@ -1032,21 +1102,87 @@
                     break;
             }
         }
+        
+        // Restaurar seção e modal após atualização
+        async function restaurarEstado() {
+            const prefs = await carregarPreferencias();
+            const secao = prefs?.secao_atual || 'dashboard';
+            
+            // Restaurar seção (sem salvar novamente)
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            const secaoEl = document.getElementById('secao' + secao.charAt(0).toUpperCase() + secao.slice(1));
+            if (secaoEl) secaoEl.classList.add('active');
+            
+            // Atualizar menu ativo
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                const linkText = link.textContent.toLowerCase();
+                const secaoNome = secao.replace('orcamentos', 'orçamentos');
+                if (linkText.includes(secaoNome)) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+            
+            // Carregar dados da seção
+            switch(secao) {
+                case 'dashboard':
+                    moduloCRM.renderizarDashboard();
+                    break;
+                case 'clientes':
+                    moduloCRM.renderizarClientes();
+                    break;
+                case 'agenda':
+                    moduloCRM.renderizarAgenda();
+                    break;
+                case 'orcamentos':
+                    moduloCRM.renderizarOrcamentos();
+                    break;
+            }
+            
+            // Restaurar modal
+            if (prefs?.modal_aberto && prefs?.modal_id) {
+                setTimeout(async () => {
+                    if (prefs.modal_aberto === 'caminhao') {
+                        await moduloCRM.verCaminhao(prefs.modal_id);
+                    } else if (prefs.modal_aberto === 'orcamento') {
+                        await moduloCRM.verDetalheOrcamento(prefs.modal_id);
+                    } else if (prefs.modal_aberto === 'cliente') {
+                        await moduloCRM.verCliente(prefs.modal_id);
+                    }
+                }, 300);
+            }
+        }
+        
+        // Salvar modal aberto
+        window.salvarModalAberto = function(tipo, id) {
+            salvarPreferencias({ modal_aberto: tipo, modal_id: id });
+        };
+        
+        // Limpar modal ao fechar
+        document.addEventListener('hidden.bs.modal', function() {
+            salvarPreferencias({ modal_aberto: null, modal_id: null });
+        });
 
         // Autenticação
         async function verificarAuth() {
-            const { data: { user } } = await supabase.auth.getUser();
+            // Verificar sessão existente primeiro (mais rápido)
+            const { data: { session } } = await supabase.auth.getSession();
             
-            if (user) {
+            if (session?.user) {
                 document.getElementById('telaLogin').classList.add('d-none');
                 document.getElementById('sistemaPrincipal').classList.remove('d-none');
-                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userEmail').textContent = session.user.email;
                 
-                await moduloCRM.inicializar(user.id);
+                await moduloCRM.inicializar(session.user.id);
+                await restaurarEstado();
             } else {
                 document.getElementById('telaLogin').classList.remove('d-none');
                 document.getElementById('sistemaPrincipal').classList.add('d-none');
             }
+            
+            // Mostrar página após verificação
+            document.body.style.visibility = 'visible';
         }
 
         async function fazerLogout() {
