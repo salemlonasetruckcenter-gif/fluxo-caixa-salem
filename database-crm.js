@@ -291,6 +291,41 @@ const databaseCRM = {
         }
     },
     
+    async buscarInteracao(id) {
+        try {
+            const { data, error } = await supabase
+                .from('interacoes')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao buscar interação:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async atualizarInteracao(id, dados) {
+        try {
+            dados.updated_at = new Date().toISOString();
+            
+            const { data, error } = await supabase
+                .from('interacoes')
+                .update(dados)
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Erro ao atualizar interação:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     async excluirInteracao(id) {
         try {
             const { error } = await supabase
@@ -528,21 +563,21 @@ const databaseCRM = {
             }
             
             const dataInicioISO = dataInicio.toISOString();
-            const agora = new Date().toISOString();
             
-            // Buscar todos os caminhões com dados do cliente
-            const { data: caminhoes, error: errCaminhoes } = await supabase
-                .from('caminhoes')
-                .select('id, placa, etapa, proximo_contato_em, updated_at, clientes(nome_razao, nome_fantasia)');
+            // Buscar todos os orçamentos com dados do cliente e caminhão
+            const { data: orcamentos, error: errOrcamentos } = await supabase
+                .from('orcamentos')
+                .select('id, status, valor_final, created_at, updated_at, clientes(nome_razao, nome_fantasia), caminhoes(placa)')
+                .order('updated_at', { ascending: false });
             
-            if (errCaminhoes) throw errCaminhoes;
+            if (errOrcamentos) throw errOrcamentos;
             
-            // Calcular métricas
-            const fechados = caminhoes.filter(c => c.etapa === 'fechado' && c.updated_at >= dataInicioISO);
-            const negociando = caminhoes.filter(c => c.etapa === 'negociando');
-            const gelados = caminhoes.filter(c => c.etapa === 'gelado');
-            const perdidos = caminhoes.filter(c => c.etapa === 'perdido' && c.updated_at >= dataInicioISO);
-            const orcamentoEnviado = caminhoes.filter(c => c.etapa === 'orcamento_enviado');
+            // Calcular métricas por status do orçamento
+            const fechados = orcamentos.filter(o => o.status === 'fechado' && o.updated_at >= dataInicioISO);
+            const negociando = orcamentos.filter(o => o.status === 'negociando');
+            const gelados = orcamentos.filter(o => o.status === 'gelado');
+            const perdidos = orcamentos.filter(o => o.status === 'perdido' && o.updated_at >= dataInicioISO);
+            const orcamentoEnviado = orcamentos.filter(o => o.status === 'orcamento_enviado');
             
             return {
                 success: true,
