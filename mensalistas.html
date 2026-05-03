@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensalistas - Controle Completo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --danger-gradient: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        .navbar-custom {
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-cliente {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .card-cliente:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-cliente-header {
+            background: var(--primary-gradient);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-cliente-body {
+            padding: 20px;
+        }
+
+        .cliente-nome {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .cliente-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .cliente-info-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+
+        .cliente-info-item i {
+            margin-right: 8px;
+            color: #667eea;
+        }
+
+        .veiculo-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .veiculo-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .placa-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            letter-spacing: 2px;
+        }
+
+        .lavagem-ok {
+            background: var(--success-gradient);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
+        .lavagem-alerta {
+            background: var(--danger-gradient);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-whatsapp:hover {
+            background: #128C7E;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .btn-lavagem {
+            background: var(--info-gradient);
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-lavagem:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .modal-custom .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-custom .modal-header {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-custom .modal-footer {
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .form-control, .form-select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: #667eea;
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .form-label {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 10px;
+        }
+
+        .alert-success {
+            background: var(--success-gradient);
+            color: #fff;
+        }
+
+        .alert-danger {
+            background: var(--danger-gradient);
+            color: #fff;
+        }
+
+        .alert-warning {
+            background: var(--warning-gradient);
+            color: #fff;
+        }
+
+        .alert-info {
+            background: var(--info-gradient);
+            color: #fff;
+        }
+
+        .secao-alertas {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .alerta-item {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .alerta-vence-hoje {
+            border-left: 4px solid #ffc107;
+        }
+
+        .alerta-atrasado {
+            border-left: 4px solid #dc3545;
+        }
+
+        .badge-hoje {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-atrasado {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        .stats-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-car me-2"></i>
+                <strong>Fluxo Caixa Profissional</strong>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3" id="userInfo">
+                    <i class="fas fa-user me-1"></i>Carregando...
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-1"></i>Sair
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid p-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-users me-2"></i>Mensalistas</h2>
+            <a href="index.html" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card fade-in">
+                    <i class="fas fa-users fa-2x mb-2" style="color: #667eea;"></i>
+                    <div class="stats-number" id="totalClientes">0</div>
+                    <div>Clientes Ativos</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card fade-in">
+                    <i class="fas fa-credit-card fa-2x mb-2" style="color: #38ef7d;"></i>
+                    <div class="stats-number" id="mensalidadesAtivas">0</div>
+                    <div>Mensalidades Ativas</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card fade-in">
+                    <i class="fas fa-dollar-sign fa-2x mb-2" style="color: #4facfe;"></i>
+                    <div class="stats-number" id="faturamentoMensal">R$ 0</div>
+                    <div>Faturamento Mensal</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas de Pagamento -->
+        <div class="secao-alertas" id="secaoAlertas" style="display: none;">
+            <h5 class="mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>Alertas de Pagamento
+                <span class="badge bg-warning ms-2" id="totalAlertas">0</span>
+            </h5>
+            <div id="listaAlertas"></div>
+        </div>
+
+        <!-- Formulário de Cadastro -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Cadastrar Novo Mensalista</h5>
+            </div>
+            <div class="card-body">
+                <form id="formCliente">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nome *</label>
+                            <input type="text" class="form-control" id="clienteNome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefone *</label>
+                            <input type="tel" class="form-control" id="clienteTelefone" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Empresa</label>
+                            <input type="text" class="form-control" id="clienteEmpresa">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Valor Mensal (R$)</label>
+                            <input type="number" class="form-control" id="clienteValor" step="0.01" min="0">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Vencimento</label>
+                            <input type="date" class="form-control" id="clienteVencimento">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" id="clienteObservacao" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Cadastrar Cliente
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lista de Clientes -->
+        <div id="listaClientes"></div>
+    </div>
+
+    <!-- Modal Adicionar Veículo -->
+    <div class="modal fade modal-custom" id="modalVeiculo" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <h5 class="modal-title">
+                        <i class="fas fa-car me-2"></i>Adicionar Veículo
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formVeiculo">
+                        <input type="hidden" id="veiculoClienteId">
+                        <input type="hidden" id="veiculoId">
+                        <div class="mb-3">
+                            <label class="form-label">Placa *</label>
+                            <input type="text" class="form-control" id="veiculoPlaca" maxlength="7" style="text-transform: uppercase;" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-control" id="veiculoModelo">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cor</label>
+                            <input type="text" class="form-control" id="veiculoCor">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-2"></i>Salvar Veículo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registrar Pagamento -->
+    <div class="modal fade modal-custom" id="modalPagamento" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+                    <h5 class="modal-title">
+                        <i class="fas fa-receipt me-2"></i>Registrar Pagamento
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formPagamento">
+                        <input type="hidden" id="pagamentoClienteId">
+                        <input type="hidden" id="pagamentoClienteNome">
+                        <div class="mb-3">
+                            <label class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="pagamentoClienteDisplay" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mês de Referência</label>
+                            <input type="month" class="form-control" id="pagamentoMes" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="number" class="form-control" id="pagamentoValor" step="0.01" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Forma de Pagamento</label>
+                            <select class="form-control" id="pagamentoForma" required>
+                                <option value="">Selecione...</option>
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="pix">PIX</option>
+                                <option value="cartao">Cartão</option>
+                                <option value="transferencia">Transferência</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-save me-2"></i>Registrar Pagamento
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Cliente -->
+    <div class="modal fade modal-custom" id="modalEditarCliente" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Editar Cliente
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarCliente">
+                        <input type="hidden" id="editarClienteId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nome *</label>
+                                <input type="text" class="form-control" id="editarClienteNome" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefone *</label>
+                                <input type="tel" class="form-control" id="editarClienteTelefone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Empresa</label>
+                                <input type="text" class="form-control" id="editarClienteEmpresa">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Valor Mensal (R$)</label>
+                                <input type="number" class="form-control" id="editarClienteValor" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Vencimento</label>
+                                <input type="date" class="form-control" id="editarClienteVencimento">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observação</label>
+                                <textarea class="form-control" id="editarClienteObservacao" rows="2"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Histórico de Lavagens -->
+    <div class="modal fade modal-custom" id="modalHistoricoLavagens" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+                    <h5 class="modal-title">
+                        <i class="fas fa-soap me-2"></i>Histórico de Lavagens - <span id="historicoLavagensNome"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    <div id="tabelaHistoricoLavagens"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Histórico de Pagamentos -->
+    <div class="modal fade modal-custom" id="modalHistoricoPagamentos" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+                    <h5 class="modal-title">
+                        <i class="fas fa-receipt me-2"></i>Histórico de Pagamentos - <span id="historicoPagamentosNome"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    <div id="tabelaHistoricoPagamentos"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Configuração Supabase
+        const SUPABASE_URL = 'https://emkiewosmlnyjnpujbui.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVta2lld29zbWxueWpucHVqYnVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDMxOTIsImV4cCI6MjA5MjM3OTE5Mn0.ohXoyqFJfyJxlyS1Efpykr0l0zezC2MZjVJWf55NV0c';
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Variáveis globais
+        let clientes = [];
+        let veiculos = [];
+        let lavagens = [];
+        let pagamentos = [];
+        let filtroAtual = '';
+
+        // Verificar login ao carregar
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.body.classList.add('loaded');
+            document.getElementById('userInfo').textContent = user.email;
+
+            // Definir mês atual no campo de pagamento
+            const hoje = new Date();
+            document.getElementById('pagamentoMes').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+
+            await carregarDados();
+        });
+
+        // Formulário de cliente
+        document.getElementById('formCliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await cadastrarCliente();
+        });
+
+        // Cadastrar cliente
+        async function cadastrarCliente() {
+            const nome = document.getElementById('clienteNome').value.trim();
+            const telefone = document.getElementById('clienteTelefone').value.replace(/\D/g, '');
+            const empresa = document.getElementById('clienteEmpresa').value.trim();
+            const valor = parseFloat(document.getElementById('clienteValor').value) || 0;
+            const dataVencimento = document.getElementById('clienteVencimento').value || null;
+            const observacao = document.getElementById('clienteObservacao').value.trim();
+
+            if (!nome || !telefone) {
+                showAlert('Preencha nome e telefone!', 'warning');
+                return;
+            }
+
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('clientes_estacionamento')
+                    .insert([{
+                        user_id: user.id,
+                        nome: nome,
+                        telefone: telefone,
+                        empresa: empresa,
+                        valor_mensal: valor,
+                        data_vencimento: dataVencimento,
+                        observacao: observacao,
+                        status: 'ativo'
+                    }]);
+
+                if (error) {
+                    showAlert('Erro ao cadastrar cliente: ' + error.message, 'danger');
+                    return;
+                }
+
+                showAlert('Cliente cadastrado com sucesso!', 'success');
+                document.getElementById('formCliente').reset();
+                await carregarDados();
+
+            } catch (error) {
+                console.error('Erro ao cadastrar cliente:', error);
+                showAlert('Erro ao cadastrar cliente', 'danger');
+            }
+        }
+
+        // Carregar dados do Supabase
+        async function carregarDados() {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) return;
+
+            try {
+                // Carregar clientes
+                const { data: clientesData, error: clientesError } = await supabaseClient
+                    .from('clientes_estacionamento')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('status', 'ativo')
+                    .order('nome');
+
+                if (clientesError) throw clientesError;
+                clientes = clientesData || [];
+
+                // Carregar veículos
+                const { data: veiculosData, error: veiculosError } = await supabaseClient
+                    .from('veiculos')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('placa');
+
+                if (veiculosError) throw veiculosError;
+                veiculos = veiculosData || [];
+
+                // Carregar lavagens
+                const { data: lavagensData, error: lavagensError } = await supabaseClient
+                    .from('lavagens')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('data_lavagem', { ascending: false });
+
+                if (lavagensError) throw lavagensError;
+                lavagens = lavagensData || [];
+
+                // Carregar pagamentos
+                const { data: pagamentosData, error: pagamentosError } = await supabaseClient
+                    .from('pagamentos')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('data_pagamento', { ascending: false });
+
+                if (pagamentosError) throw pagamentosError;
+                pagamentos = pagamentosData || [];
+
+                renderizarClientes();
+                atualizarStats();
+                verificarAlertas();
+
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                showAlert('Erro ao carregar dados', 'danger');
+            }
+        }
+
+        // Renderizar lista de clientes
+        function renderizarClientes() {
+            const container = document.getElementById('listaClientes');
+            
+            if (clientes.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x mb-3 text-muted"></i>
+                        <h5 class="text-muted">Nenhum cliente cadastrado</h5>
+                        <p class="text-muted">Comece cadastrando seu primeiro mensalista</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = clientes.map(cliente => {
+                const veiculosCliente = veiculos.filter(v => v.cliente_id === cliente.id);
+                const pagamentosCliente = pagamentos.filter(p => p.cliente_id === cliente.id);
+                const lavagensCliente = getLavagensCliente(veiculosCliente);
+
+                return `
+                    <div class="card-cliente fade-in">
+                        <div class="card-cliente-header">
+                            <h3 class="cliente-nome">${cliente.nome}</h3>
+                            <div>
+                                <button class="btn btn-outline-warning btn-sm me-2" onclick="abrirModalEditarCliente('${cliente.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="excluirCliente('${cliente.id}', '${cliente.nome}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-cliente-body">
+                            <div class="cliente-info">
+                                <div class="cliente-info-item">
+                                    <i class="fas fa-phone"></i>
+                                    ${formatarTelefone(cliente.telefone)}
+                                </div>
+                                ${cliente.empresa ? `
+                                    <div class="cliente-info-item">
+                                        <i class="fas fa-building"></i>
+                                        ${cliente.empresa}
+                                    </div>
+                                ` : ''}
+                                <div class="cliente-info-item">
+                                    <i class="fas fa-dollar-sign"></i>
+                                    R$ ${(cliente.valor_mensal || 0).toFixed(2)}
+                                </div>
+                                ${cliente.data_vencimento ? `
+                                    <div class="cliente-info-item">
+                                        <i class="fas fa-calendar"></i>
+                                        ${new Date(cliente.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            ${cliente.observacao ? `
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sticky-note me-1"></i>
+                                        ${cliente.observacao}
+                                    </small>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="mb-3">
+                                <h6><i class="fas fa-car me-2"></i>Veículos (${veiculosCliente.length})</h6>
+                                ${veiculosCliente.length === 0 ? `
+                                    <p class="text-muted">Nenhum veículo cadastrado</p>
+                                ` : veiculosCliente.map(v => `
+                                    <div class="veiculo-card">
+                                        <div class="veiculo-info">
+                                            <span class="placa-badge">${v.placa}</span>
+                                            <span>${v.modelo || ''} ${v.cor || ''}</span>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-warning btn-sm" onclick="editarVeiculo('${v.id}')" title="Editar Veículo">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" onclick="excluirVeiculo('${v.id}', '${v.placa}')" title="Excluir Veículo">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                
+                                <button class="btn btn-outline-primary btn-sm mt-2" onclick="abrirModalVeiculo('${cliente.id}')">
+                                    <i class="fas fa-plus me-2"></i>Adicionar Veículo
+                                </button>
+                            </div>
+                            
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-outline-info btn-sm flex-fill" onclick="abrirHistoricoLavagens('${cliente.id}', '${cliente.nome}')">
+                                    <i class="fas fa-soap me-1"></i>Histórico Lavagens
+                                    <span class="badge bg-info ms-1">${lavagensCliente.length}</span>
+                                </button>
+                                <button class="btn btn-outline-success btn-sm flex-fill" onclick="abrirHistoricoPagamentos('${cliente.id}', '${cliente.nome}')">
+                                    <i class="fas fa-receipt me-1"></i>Histórico Pagamentos
+                                    <span class="badge bg-success ms-1">${pagamentosCliente.length}</span>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm flex-fill" onclick="imprimirReciboMensalista('${cliente.id}', '${cliente.nome}', '${cliente.valor_mensal || 0}')">
+                                    <i class="fas fa-print me-1"></i>Imprimir Recibo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Atualizar estatísticas
+        function atualizarStats() {
+            document.getElementById('totalClientes').textContent = clientes.length;
+            
+            const mensalidadesAtivas = clientes.filter(c => c.valor_mensal > 0).length;
+            document.getElementById('mensalidadesAtivas').textContent = mensalidadesAtivas;
+            
+            const faturamentoMensal = clientes.reduce((sum, c) => sum + (c.valor_mensal || 0), 0);
+            document.getElementById('faturamentoMensal').textContent = `R$ ${faturamentoMensal.toFixed(0)}`;
+        }
+
+        // Verificar alertas de pagamento
+        function verificarAlertas() {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            
+            const alertas = [];
+            
+            clientes.forEach(cliente => {
+                let dataVencimento;
+                let dataFormatada;
+                let diaVencimento;
+
+                // Verificar se tem data_vencimento (novo) ou dia_vencimento (antigo)
+                if (cliente.data_vencimento) {
+                    const dataOriginal = new Date(cliente.data_vencimento + 'T00:00:00');
+                    diaVencimento = dataOriginal.getDate();
+
+                    // Se a data original ainda não passou, usa ela
+                    if (dataOriginal >= hoje) {
+                        dataVencimento = dataOriginal;
+                    } else {
+                        // Calcular vencimento do mês atual usando o dia
+                        dataVencimento = new Date(anoAtual, mesAtual, diaVencimento);
+                    }
+                    dataFormatada = dataVencimento.toLocaleDateString('pt-BR');
+                } else if (cliente.dia_vencimento) {
+                    // Usar dia_vencimento no mês atual
+                    diaVencimento = cliente.dia_vencimento;
+                    dataVencimento = new Date(anoAtual, mesAtual, diaVencimento);
+                    dataFormatada = `Dia ${diaVencimento}`;
+                } else {
+                    return; // Sem vencimento definido
+                }
+
+                // Diferença em dias
+                const diffDias = Math.floor((dataVencimento - hoje) / (1000 * 60 * 60 * 24));
+
+                // No dia do vencimento
+                if (diffDias === 0) {
+                    alertas.push({
+                        tipo: 'hoje',
+                        cliente: cliente,
+                        dataFormatada: dataFormatada,
+                        mensagem: 'Vence HOJE',
+                        badge: 'badge-hoje',
+                        classe: 'alerta-vence-hoje',
+                        textoWhats: `Olá ${cliente.nome}! Sua mensalidade vence HOJE, ${dataFormatada}. Valor: R$ ${(cliente.valor_mensal || 0).toFixed(2)}. Aguardamos seu pagamento!`
+                    });
+                }
+
+                // Atrasado (após vencimento)
+                if (diffDias < 0) {
+                    const diasAtraso = Math.abs(diffDias);
+                    alertas.push({
+                        tipo: 'atrasado',
+                        cliente: cliente,
+                        dataFormatada: dataFormatada,
+                        mensagem: `${diasAtraso} dia(s) em atraso`,
+                        badge: 'badge-atrasado',
+                        classe: 'alerta-atrasado',
+                        textoWhats: `Olá ${cliente.nome}! Sua mensalidade venceu em ${dataFormatada} e está em atraso há ${diasAtraso} dia(s). Valor: R$ ${(cliente.valor_mensal || 0).toFixed(2)}. Por favor, entre em contato para regularização.`
+                    });
+                }
+            });
+
+            // Renderizar alertas
+            const secao = document.getElementById('secaoAlertas');
+            const lista = document.getElementById('listaAlertas');
+            const total = document.getElementById('totalAlertas');
+
+            if (alertas.length === 0) {
+                secao.style.display = 'none';
+                return;
+            }
+
+            secao.style.display = 'block';
+            total.textContent = alertas.length;
+
+            lista.innerHTML = alertas.map(a => `
+                <div class="alerta-item ${a.classe}">
+                    <div>
+                        <strong>${a.cliente.nome}</strong>
+                        <span class="badge ${a.badge} ms-2">${a.mensagem}</span>
+                        <br>
+                        <small>Valor: R$ ${(a.cliente.valor_mensal || 0).toFixed(2)} | Venc. <strong>${a.dataFormatada}</strong></small>
+                    </div>
+                    <button class="btn btn-whatsapp btn-sm" onclick="abrirWhatsApp('${a.cliente.telefone}', '${a.textoWhats.replace(/'/g, "\\'")}')">
+                        <i class="bi bi-whatsapp me-1"></i>Enviar
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Formatar telefone
+        function formatarTelefone(tel) {
+            if (!tel) return '-';
+            tel = tel.replace(/\D/g, '');
+            if (tel.length === 11) {
+                return `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
+            }
+            return tel;
+        }
+
+        // Abrir WhatsApp
+        function abrirWhatsApp(numero, mensagem) {
+            if (!numero) {
+                showAlert('Telefone não disponível', 'warning');
+                return;
+            }
+            const url = `https://wa.me/55${numero}?text=${encodeURIComponent(mensagem)}`;
+            window.open(url, '_blank');
+        }
+
+        // Abrir modal de veículo
+        function abrirModalVeiculo(clienteId) {
+            document.getElementById('veiculoClienteId').value = clienteId;
+            document.getElementById('veiculoPlaca').value = '';
+            document.getElementById('veiculoModelo').value = '';
+            document.getElementById('veiculoCor').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalVeiculo'));
+            modal.show();
+        }
+
+        // Editar veículo
+        async function editarVeiculo(veiculoId) {
+            try {
+                const user = JSON.parse(localStorage.getItem('currentUser'));
+                
+                // Buscar dados do veículo
+                const { data: veiculo, error } = await supabaseClient
+                    .from('veiculos')
+                    .select('*')
+                    .eq('id', veiculoId)
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (error || !veiculo) {
+                    showAlert('Veículo não encontrado!', 'danger');
+                    return;
+                }
+                
+                // Preencher o modal com os dados do veículo
+                document.getElementById('veiculoClienteId').value = veiculo.cliente_id;
+                document.getElementById('veiculoPlaca').value = veiculo.placa;
+                document.getElementById('veiculoModelo').value = veiculo.modelo || '';
+                document.getElementById('veiculoCor').value = veiculo.cor || '';
+                
+                // Adicionar campo hidden para identificar que é edição
+                let veiculoIdInput = document.getElementById('veiculoId');
+                if (!veiculoIdInput) {
+                    veiculoIdInput = document.createElement('input');
+                    veiculoIdInput.type = 'hidden';
+                    veiculoIdInput.id = 'veiculoId';
+                    document.getElementById('modalVeiculo').appendChild(veiculoIdInput);
+                }
+                veiculoIdInput.value = veiculoId;
+                
+                // Mudar título do modal
+                const modalTitle = document.querySelector('#modalVeiculo .modal-title');
+                if (modalTitle) {
+                    modalTitle.textContent = 'Editar Veículo';
+                }
+                
+                // Mudar texto do botão
+                const saveBtn = document.querySelector('#modalVeiculo .btn-primary');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Atualizar';
+                }
+                
+                const modal = new bootstrap.Modal(document.getElementById('modalVeiculo'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Erro ao editar veículo:', error);
+                showAlert('Erro ao carregar dados do veículo!', 'danger');
+            }
+        }
+
+        // Salvar veículo
+        async function salvarVeiculo() {
+            const clienteId = document.getElementById('veiculoClienteId').value;
+            const placa = document.getElementById('veiculoPlaca').value.toUpperCase().trim();
+            const modelo = document.getElementById('veiculoModelo').value.trim();
+            const cor = document.getElementById('veiculoCor').value.trim();
+            const veiculoId = document.getElementById('veiculoId')?.value;
+            
+            if (!placa) {
+                showAlert('Informe a placa!', 'warning');
+                return;
+            }
+            
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            
+            try {
+                if (veiculoId) {
+                    // Edição de veículo existente
+                    const { error } = await supabaseClient
+                        .from('veiculos')
+                        .update({
+                            placa: placa,
+                            modelo: modelo,
+                            cor: cor
+                        })
+                        .eq('id', veiculoId)
+                        .eq('user_id', user.id);
+                    
+                    if (error) {
+                        showAlert('Erro ao atualizar veículo!', 'danger');
+                        return;
+                    }
+                    
+                    showAlert('Veículo atualizado com sucesso!', 'success');
+                } else {
+                    // Novo veículo - verificar se placa já existe
+                    const { data: existente } = await supabaseClient
+                        .from('veiculos')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('placa', placa)
+                        .single();
+                    
+                    if (existente) {
+                        showAlert('Esta placa já está cadastrada!', 'danger');
+                        return;
+                    }
+                    
+                    const { error } = await supabaseClient
+                        .from('veiculos')
+                        .insert([{
+                            cliente_id: clienteId,
+                            user_id: user.id,
+                            placa: placa,
+                            modelo: modelo,
+                            cor: cor
+                        }]);
+                    
+                    if (error) {
+                        showAlert('Erro ao salvar veículo!', 'danger');
+                        return;
+                    }
+                    
+                    showAlert('Veículo cadastrado com sucesso!', 'success');
+                }
+                
+                // Fechar modal e recarregar dados
+                const modalVeiculo = bootstrap.Modal.getInstance(document.getElementById('modalVeiculo'));
+                modalVeiculo.hide();
+                
+                // Resetar modal para novo cadastro
+                resetModalVeiculo();
+                
+                carregarDados();
+                
+            } catch (error) {
+                console.error('Erro ao salvar veículo:', error);
+                showAlert('Erro ao salvar veículo!', 'danger');
+            }
+        }
+
+        // Resetar modal para novo cadastro
+        function resetModalVeiculo() {
+            // Limpar campo hidden de ID
+            const veiculoIdInput = document.getElementById('veiculoId');
+            if (veiculoIdInput) {
+                veiculoIdInput.value = '';
+            }
+            
+            // Resetar título
+            const modalTitle = document.querySelector('#modalVeiculo .modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = 'Adicionar Veículo';
+            }
+            
+            // Resetar texto do botão
+            const saveBtn = document.querySelector('#modalVeiculo .btn-primary');
+            if (saveBtn) {
+                saveBtn.textContent = 'Salvar';
+            }
+        }
+
+        // Formulário de veículo
+        document.getElementById('formVeiculo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await salvarVeiculo();
+        });
+
+        // Excluir veículo
+        async function excluirVeiculo(veiculoId, placa) {
+            if (!confirm(`Tem certeza que deseja excluir o veículo "${placa}"?`)) {
+                return;
+            }
+
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('veiculos')
+                    .delete()
+                    .eq('id', veiculoId)
+                    .eq('user_id', user.id);
+
+                if (error) {
+                    showAlert('Erro ao excluir veículo: ' + error.message, 'danger');
+                    return;
+                }
+
+                showAlert('Veículo excluído!', 'success');
+                await carregarDados();
+
+            } catch (error) {
+                console.error('Erro ao excluir veículo:', error);
+                showAlert('Erro ao excluir veículo', 'danger');
+            }
+        }
+
+        // Abrir modal de pagamento
+        function abrirModalPagamento(clienteId, nome, valorMensal) {
+            document.getElementById('pagamentoClienteId').value = clienteId;
+            document.getElementById('pagamentoClienteNome').textContent = nome;
+            document.getElementById('pagamentoValor').value = valorMensal || 0;
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalPagamento'));
+            modal.show();
+        }
+
+        // Formulário de pagamento
+        document.getElementById('formPagamento').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await salvarPagamento();
+        });
+
+        // Salvar pagamento
+        async function salvarPagamento() {
+            const clienteId = document.getElementById('pagamentoClienteId').value;
+            const mes = document.getElementById('pagamentoMes').value;
+            const valor = parseFloat(document.getElementById('pagamentoValor').value) || 0;
+            const forma = document.getElementById('pagamentoForma').value;
+            
+            if (!mes || !valor || !forma) {
+                showAlert('Preencha todos os campos!', 'warning');
+                return;
+            }
+
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) return;
+
+            try {
+                // Verificar se já existe pagamento para este mês
+                const { data: existente } = await supabaseClient
+                    .from('pagamentos')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('cliente_id', clienteId)
+                    .eq('mes_referencia', mes)
+                    .single();
+
+                if (existente) {
+                    showAlert('Já existe um pagamento registrado para este mês!', 'warning');
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from('pagamentos')
+                    .insert([{
+                        user_id: user.id,
+                        cliente_id: clienteId,
+                        mes_referencia: mes,
+                        valor: valor,
+                        forma_pagamento: forma,
+                        data_pagamento: new Date().toISOString()
+                    }]);
+
+                if (error) {
+                    showAlert('Erro ao registrar pagamento: ' + error.message, 'danger');
+                    return;
+                }
+
+                showAlert('Pagamento registrado com sucesso!', 'success');
+                
+                // Fechar modal e recarregar dados
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalPagamento'));
+                modal.hide();
+                
+                await carregarDados();
+
+            } catch (error) {
+                console.error('Erro ao salvar pagamento:', error);
+                showAlert('Erro ao salvar pagamento', 'danger');
+            }
+        }
+
+        // Abrir modal de edição do cliente
+        function abrirModalEditarCliente(clienteId) {
+            const cliente = clientes.find(c => c.id === clienteId);
+            if (!cliente) return;
+
+            document.getElementById('editarClienteId').value = cliente.id;
+            document.getElementById('editarClienteNome').value = cliente.nome || '';
+            document.getElementById('editarClienteTelefone').value = cliente.telefone || '';
+            document.getElementById('editarClienteEmpresa').value = cliente.empresa || '';
+            document.getElementById('editarClienteValor').value = cliente.valor_mensal || 0;
+            // Se tem data_vencimento usa ela, senão deixa vazio para o usuário preencher
+            document.getElementById('editarClienteVencimento').value = cliente.data_vencimento || '';
+            document.getElementById('editarClienteObservacao').value = cliente.observacao || '';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarCliente'));
+            modal.show();
+        }
+
+        // Formulário de edição
+        document.getElementById('formEditarCliente').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await salvarEdicaoCliente();
+        });
+
+        // Salvar edição do cliente
+        async function salvarEdicaoCliente() {
+            const clienteId = document.getElementById('editarClienteId').value;
+            const nome = document.getElementById('editarClienteNome').value.trim();
+            const telefone = document.getElementById('editarClienteTelefone').value.replace(/\D/g, '');
+            const empresa = document.getElementById('editarClienteEmpresa').value.trim();
+            const valor = parseFloat(document.getElementById('editarClienteValor').value) || 0;
+            const dataVencimento = document.getElementById('editarClienteVencimento').value || null;
+            const observacao = document.getElementById('editarClienteObservacao').value.trim();
+
+            if (!nome || !telefone) {
+                showAlert('Preencha nome e telefone!', 'warning');
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('clientes_estacionamento')
+                .update({
+                    nome: nome,
+                    telefone: telefone,
+                    empresa: empresa,
+                    valor_mensal: valor,
+                    data_vencimento: dataVencimento,
+                    observacao: observacao
+                })
+                .eq('id', clienteId);
+
+            if (error) {
+                showAlert('Erro ao salvar alterações: ' + error.message, 'danger');
+                return;
+            }
+
+            showAlert('Dados atualizados com sucesso!', 'success');
+            
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarCliente'));
+            modal.hide();
+            
+            await carregarDados();
+        }
+
+        // Excluir cliente
+        async function excluirCliente(clienteId, nome) {
+            if (!confirm(`Tem certeza que deseja excluir o cliente "${nome}"?\n\nIsso também excluirá todos os veículos e lavagens associados.`)) {
+                return;
+            }
+
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            if (!user) return;
+
+            try {
+                // Buscar veículos do cliente
+                const veiculosCliente = veiculos.filter(v => v.cliente_id === clienteId);
+                const idsVeiculos = veiculosCliente.map(v => v.id);
+
+                // Excluir lavagens dos veículos
+                if (idsVeiculos.length > 0) {
+                    await supabaseClient
+                        .from('lavagens')
+                        .delete()
+                        .in('veiculo_id', idsVeiculos);
+                }
+
+                // Excluir veículos
+                await supabaseClient
+                    .from('veiculos')
+                    .delete()
+                    .eq('cliente_id', clienteId);
+
+                // Excluir cliente (soft delete - muda status)
+                const { error } = await supabaseClient
+                    .from('clientes_estacionamento')
+                    .update({ status: 'inativo' })
+                    .eq('id', clienteId);
+
+                if (error) {
+                    showAlert('Erro ao excluir cliente: ' + error.message, 'danger');
+                    return;
+                }
+
+                showAlert(`Cliente "${nome}" excluído!`, 'success');
+                await carregarDados();
+
+            } catch (error) {
+                console.error('Erro ao excluir cliente:', error);
+                showAlert('Erro ao excluir cliente', 'danger');
+            }
+        }
+
+        // Obter lavagens de todos os veículos de um cliente (busca por placa)
+        function getLavagensCliente(veiculosCliente) {
+            const placasCliente = veiculosCliente.map(v => v.placa.toUpperCase());
+            return lavagens
+                .filter(l => {
+                    // Busca por placa (da fila de lavagem) ou por veiculo_id (legado)
+                    const placaLavagem = (l.placa || '').toUpperCase();
+                    return placasCliente.includes(placaLavagem) || veiculosCliente.some(v => v.id === l.veiculo_id);
+                })
+                .sort((a, b) => new Date(b.data_lavagem) - new Date(a.data_lavagem));
+        }
+
+        // Abrir histórico de lavagens
+        function abrirHistoricoLavagens(clienteId, nome) {
+            const cliente = clientes.find(c => c.id === clienteId);
+            if (!cliente) return;
+
+            const veiculosCliente = veiculos.filter(v => v.cliente_id === clienteId);
+            const lavagensCliente = getLavagensCliente(veiculosCliente);
+
+            document.getElementById('historicoLavagensNome').textContent = nome;
+
+            const tabela = document.getElementById('tabelaHistoricoLavagens');
+            
+            if (lavagensCliente.length === 0) {
+                tabela.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-soap fa-2x mb-3 text-muted"></i>
+                        <p class="text-muted">Nenhuma lavagem registrada</p>
+                    </div>
+                `;
+            } else {
+                tabela.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-dark">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Veículo</th>
+                                    <th>Tipo</th>
+                                    <th>Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lavagensCliente.map(l => `
+                                    <tr>
+                                        <td>${formatarData(l.data_lavagem)}</td>
+                                        <td>${l.placa || l.veiculo_id}</td>
+                                        <td>${l.tipo || '-'}</td>
+                                        <td>R$ ${(l.valor || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalHistoricoLavagens'));
+            modal.show();
+        }
+
+        // Abrir histórico de pagamentos
+        function abrirHistoricoPagamentos(clienteId, nome) {
+            const cliente = clientes.find(c => c.id === clienteId);
+            if (!cliente) return;
+
+            const pagamentosCliente = pagamentos.filter(p => p.cliente_id === clienteId);
+
+            document.getElementById('historicoPagamentosNome').textContent = nome;
+
+            const tabela = document.getElementById('tabelaHistoricoPagamentos');
+            
+            if (pagamentosCliente.length === 0) {
+                tabela.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-receipt fa-2x mb-3 text-muted"></i>
+                        <p class="text-muted">Nenhum pagamento registrado</p>
+                    </div>
+                `;
+            } else {
+                tabela.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-dark">
+                            <thead>
+                                <tr>
+                                    <th>Mês Referência</th>
+                                    <th>Data Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Forma</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pagamentosCliente.map(p => `
+                                    <tr>
+                                        <td>${formatarMes(p.mes_referencia)}</td>
+                                        <td>${formatarData(p.data_pagamento)}</td>
+                                        <td>R$ ${(p.valor || 0).toFixed(2)}</td>
+                                        <td>${p.forma_pagamento || '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('modalHistoricoPagamentos'));
+            modal.show();
+        }
+
+        // Formatar data
+        function formatarData(data) {
+            if (!data) return '-';
+            return new Date(data).toLocaleDateString('pt-BR');
+        }
+
+        // Formatar mês
+        function formatarMes(mes) {
+            if (!mes) return '-';
+            const [ano, mesNum] = mes.split('-');
+            const date = new Date(ano, mesNum - 1);
+            return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        }
+
+        // Imprimir recibo de mensalista
+        function imprimirReciboMensalista(clienteId, clienteNome, valorMensal) {
+            const dataAtual = new Date().toLocaleDateString('pt-BR');
+            const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            
+            // Buscar veículos do cliente
+            const veiculosCliente = veiculos.filter(v => v.cliente_id === clienteId);
+            const placasVeiculos = veiculosCliente.map(v => v.placa).join(', ') || 'Nenhum veículo cadastrado';
+            
+            // Criar conteúdo do recibo
+            const reciboContent = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto;">
+                    <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: #333;">RECIBO DE MENSALIDADE</h2>
+                        <p style="margin: 5px 0; color: #666;">Estacionamento</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin: 5px 0;"><strong>Cliente:</strong> ${clienteNome}</p>
+                        <p style="margin: 5px 0;"><strong>Período:</strong> ${mesAtual}</p>
+                        <p style="margin: 5px 0;"><strong>Data de Emissão:</strong> ${dataAtual}</p>
+                        <p style="margin: 5px 0;"><strong>Veículos:</strong> ${placasVeiculos}</p>
+                    </div>
+                    
+                    <div style="border: 2px solid #333; padding: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 18px; font-weight: bold;">VALOR:</span>
+                            <span style="font-size: 24px; font-weight: bold; color: #333;">R$ ${parseFloat(valorMensal).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <div style="border-top: 1px solid #999; padding-top: 10px; margin-bottom: 20px;">
+                            <p style="margin: 0; font-size: 12px; color: #666;">Assinatura do Cliente</p>
+                            <div style="height: 40px; border-bottom: 1px solid #999; margin-top: 20px;"></div>
+                        </div>
+                        
+                        <div style="margin-top: 30px;">
+                            <p style="margin: 0; font-size: 10px; color: #999;">
+                                * Recibo válido para comprovação de pagamento<br>
+                                * Não duplicável sem assinatura
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Abrir janela de impressão
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Recibo de Mensalidade - ${clienteNome}</title>
+                    <style>
+                        @media print {
+                            body { margin: 0; }
+                            @page { margin: 10mm; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${reciboContent}
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.close();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Mostrar alertas
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
